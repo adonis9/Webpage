@@ -54,37 +54,30 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 </div>
 
 <div class="section">
-<h2>Race Results</h2>
-<button class="draw" onclick="generateResults()">Generate Race Results</button>
-<div id="results"></div>
-</div>
-
-<div class="section">
-<h2>🏆 Final Draw Results</h2>
-<button class="draw" onclick="finalResults()">Show Final Results</button>
-<div id="finalResults"></div>
+<h2>🏁 Draw Results</h2>
+<button class="draw" onclick="generateDraw()">Generate Draw</button>
+<div id="drawResults"></div>
 </div>
 
 </div>
 
 <script>
 /* 🔑 ACCESS CODE */
-const SECRET_CODE = "HORSE2026"; // CHANGE THIS
-
+const SECRET_CODE = "HORSE2026";
 if (sessionStorage.getItem("accessGranted")) unlock(true);
 
 function unlock(auto=false){
   if(auto || document.getElementById("accessCode").value === SECRET_CODE){
-    document.getElementById("lockScreen").style.display="none";
-    document.getElementById("appContent").style.display="block";
+    lockScreen.style.display="none";
+    appContent.style.display="block";
     sessionStorage.setItem("accessGranted","true");
   } else {
-    document.getElementById("error").textContent="Incorrect access code";
+    error.textContent="Incorrect access code";
   }
 }
 
-/* 🐎 APP LOGIC */
-let horses=[], races=[], raceCount={}, raceResults=[];
+/* 🐎 DATA */
+let horses=[], races=[];
 
 const preload=[
 ["Koxera Monte Barro",["Sabe Na Mundo","Arbisa","Pisadelo","Fradu Fra"]],
@@ -98,69 +91,54 @@ const preload=[
 if(localStorage.getItem("horses")){
 horses=JSON.parse(localStorage.getItem("horses"));
 races=JSON.parse(localStorage.getItem("races"));
-raceCount=JSON.parse(localStorage.getItem("raceCount"));
-raceResults=JSON.parse(localStorage.getItem("raceResults"))||[];
 }else{
 preload.forEach(h=>{
-h[1].forEach(n=>{
-horses.push({name:n,house:h[0]});
-raceCount[n]=0;
-});
+h[1].forEach(n=>horses.push({name:n,house:h[0]}));
 });
 }
 
 function save(){
 localStorage.setItem("horses",JSON.stringify(horses));
 localStorage.setItem("races",JSON.stringify(races));
-localStorage.setItem("raceCount",JSON.stringify(raceCount));
-localStorage.setItem("raceResults",JSON.stringify(raceResults));
 updateHouses();
 }
 
 function updateHouses(){
 const hs=[...new Set(horses.map(h=>h.house))];
-const sel=document.getElementById("houseSelect");
-sel.innerHTML="";
+houseSelect.innerHTML="";
 hs.forEach(h=>{
 const o=document.createElement("option");
 o.value=h;o.textContent=h;
-sel.appendChild(o);
+houseSelect.appendChild(o);
 });
 }
 
 function addHorses(){
-let house=document.getElementById("newHouse").value.trim()||document.getElementById("houseSelect").value;
+let house=newHouse.value.trim()||houseSelect.value;
 if(!house)return alert("House required");
-document.getElementById("horseNames").value.split("\n").forEach(n=>{
+horseNames.value.split("\n").forEach(n=>{
 n=n.trim();
-if(n&&!horses.find(h=>h.name===n)){
+if(n && !horses.find(h=>h.name===n))
 horses.push({name:n,house});
-raceCount[n]=0;
-}
 });
-document.getElementById("horseNames").value="";
-document.getElementById("newHouse").value="";
+horseNames.value="";
+newHouse.value="";
 save();render();
 }
 
 function addRace(){
-const n=document.getElementById("raceName").value.trim();
-if(!n)return;
-races.push({name:n,horses:[]});
-document.getElementById("raceName").value="";
+if(!raceName.value.trim())return;
+races.push({name:raceName.value,horses:[]});
+raceName.value="";
 save();render();
 }
 
 function addToRace(r,i){
-const h=horses[i];
-if(raceCount[h.name]>=3)return alert("Max 3 races per horse");
-races[r].horses.push(h);
-raceCount[h.name]++;
+races[r].horses.push(horses[i]);
 save();render();
 }
 
 function removeFromRace(r,i){
-raceCount[races[r].horses[i].name]--;
 races[r].horses.splice(i,1);
 save();render();
 }
@@ -168,71 +146,59 @@ save();render();
 function shuffle(a){return a.sort(()=>Math.random()-0.5);}
 
 function render(){
-const div=document.getElementById("races");
-div.innerHTML="";
+racesDiv.innerHTML="";
 races.forEach((r,ri)=>{
 const d=document.createElement("div");
 d.className="race";
 d.innerHTML=`<strong>${r.name}</strong>`;
 r.horses.forEach((h,hi)=>{
-d.innerHTML+=`<div>${h.name} (${h.house})
-<button onclick="removeFromRace(${ri},${hi})">Remove</button></div>`;
+d.innerHTML+=`${h.name} (${h.house})
+<button onclick="removeFromRace(${ri},${hi})">Remove</button><br>`;
 });
 const sel=document.createElement("select");
-horses.filter(h=>!r.horses.includes(h)&&raceCount[h.name]<3)
-.forEach(h=>{
+horses.forEach((h,i)=>{
 const o=document.createElement("option");
-o.value=horses.indexOf(h);
-o.textContent=`${h.name} (${h.house})`;
+o.value=i;o.textContent=`${h.name} (${h.house})`;
 sel.appendChild(o);
 });
-d.appendChild(sel);
 const b=document.createElement("button");
 b.textContent="Add Horse";
 b.onclick=()=>addToRace(ri,sel.value);
-d.appendChild(b);
-div.appendChild(d);
+d.appendChild(sel);d.appendChild(b);
+racesDiv.appendChild(d);
 });
 updateHouses();
 }
 
-function generateResults(){
-raceResults=[];
-const res=document.getElementById("results");
-res.innerHTML="";
+/* 🏁 DRAW LOGIC */
+function generateDraw(){
+drawResults.innerHTML="";
 races.forEach(r=>{
 if(r.horses.length<2)return;
+
 let shuffled=shuffle([...r.horses]);
-let size=Math.random()<0.3?2:3;
-let chosen=shuffled.slice(0,Math.min(size,shuffled.length));
-raceResults.push({race:r.name,order:chosen});
-const d=document.createElement("div");
-d.className="race";
-d.innerHTML=`<strong>${r.name}</strong><ol>`;
-chosen.forEach(h=>d.innerHTML+=`<li>${h.name} (${h.house})</li>`);
-d.innerHTML+="</ol>";
-res.appendChild(d);
-});
-save();
+let groups=[];
+
+while(shuffled.length){
+if(shuffled.length===4){
+groups.push(shuffled.splice(0,2));
+groups.push(shuffled.splice(0,2));
+}else if(shuffled.length===2 || shuffled.length===3){
+groups.push(shuffled.splice(0));
+}else{
+groups.push(shuffled.splice(0,3));
+}
 }
 
-function finalResults(){
-const scores={};
-horses.forEach(h=>scores[h.name]={house:h.house,points:0});
-raceResults.forEach(r=>{
-r.order.forEach((h,i)=>{
-if(i===0)scores[h.name].points+=3;
-if(i===1)scores[h.name].points+=2;
-if(i===2)scores[h.name].points+=1;
+groups.forEach((g,i)=>{
+const d=document.createElement("div");
+d.className="race";
+d.innerHTML=`<strong>${r.name} – Heat ${i+1}</strong><br>
+Horses racing (${g.length}):<ul>`;
+g.forEach(h=>d.innerHTML+=`<li>${h.name} (${h.house})</li>`);
+d.innerHTML+="</ul>";
+drawResults.appendChild(d);
 });
-});
-const final=document.getElementById("finalResults");
-final.innerHTML="";
-Object.entries(scores)
-.sort((a,b)=>b[1].points-a[1].points)
-.forEach(([name,data])=>{
-if(data.points>0)
-final.innerHTML+=`<div>${name} (${data.house}) — <strong>${data.points} pts</strong></div>`;
 });
 }
 

@@ -110,6 +110,17 @@ function removeHorseFromRace(r, h) {
   render();
 }
 
+// NEW FUNCTION: Randomly shuffle horses in a race
+function makeDraw(r) {
+  const raceHorses = races[r].horses;
+  for (let i = raceHorses.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [raceHorses[i], raceHorses[j]] = [raceHorses[j], raceHorses[i]];
+  }
+  save();
+  render();
+}
+
 function render() {
   const racesDiv = document.getElementById("races");
   racesDiv.innerHTML = "";
@@ -118,6 +129,10 @@ function render() {
     const div = document.createElement("div");
     div.className = "race";
     div.innerHTML = `<strong>${race.name}</strong>`;
+
+    if (race.horses.length === 0) {
+      div.innerHTML += `<p>No horses in this race yet.</p>`;
+    }
 
     race.horses.forEach((h, hIndex) => {
       div.innerHTML += `
@@ -129,6 +144,7 @@ function render() {
         </div>`;
     });
 
+    // Dropdown to add horses
     const select = document.createElement("select");
     horses.forEach((h, i) => {
       const o = document.createElement("option");
@@ -137,12 +153,18 @@ function render() {
       select.appendChild(o);
     });
 
-    const btn = document.createElement("button");
-    btn.textContent = "Add Horse to Race";
-    btn.onclick = () => addHorseToRace(rIndex, select.value);
+    const btnAdd = document.createElement("button");
+    btnAdd.textContent = "Add Horse to Race";
+    btnAdd.onclick = () => addHorseToRace(rIndex, select.value);
+
+    const btnDraw = document.createElement("button");
+    btnDraw.textContent = "Make Draw";
+    btnDraw.style.background = "#27ae60"; // green for visibility
+    btnDraw.onclick = () => makeDraw(rIndex);
 
     div.appendChild(select);
-    div.appendChild(btn);
+    div.appendChild(btnAdd);
+    div.appendChild(btnDraw);
     racesDiv.appendChild(div);
   });
 }

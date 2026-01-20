@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Horse Draw Manager - Live Regenerate</title>
+<title>Horse Draw Manager - Final Version</title>
 <style>
 body { font-family: Arial, sans-serif; background:#f4f6f8; padding:20px; }
 h1 { text-align:center; }
@@ -30,7 +30,7 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 <!-- APP CONTENT -->
 <div id="appContent" style="display:none;">
 
-<h1>🐎 Horse Draw Manager - Live Regenerate</h1>
+<h1>🐎 Horse Draw Manager - Final Version</h1>
 <button class="delete" onclick="deleteAll()">Delete All Data</button>
 
 <div class="section">
@@ -108,7 +108,7 @@ window.onload = function() {
     updateHouses();
     renderHorseList();
     renderRaces();
-    generateAutoDraw(); // auto-update draw
+    generateAutoDraw(); // auto-update draw live
   }
 
   function updateHouses(){
@@ -203,29 +203,45 @@ window.onload = function() {
     let shuffled = shuffle([...horses]);
     let heats = [];
     while(shuffled.length){
-      let heat=[];
-      let housesInHeat = new Set();
-      for(let i=0;i<shuffled.length && heat.length<3;){
-        let h = shuffled[i];
-        let houseCount = shuffled.filter(x=>x.house===h.house).length;
-        let allowSameHouse = houseCount>5;
-        if(!housesInHeat.has(h.house) || allowSameHouse){
-          heat.push(h);
-          housesInHeat.add(h.house);
-          shuffled.splice(i,1);
-        } else { i++; }
-      }
-      while(heat.length<2 && shuffled.length) heat.push(shuffled.shift());
-      heats.push(heat);
+        let heat=[];
+        let housesInHeat = new Set();
+        for(let i=0;i<shuffled.length && heat.length<3;){
+            let h = shuffled[i];
+            let houseCount = shuffled.filter(x=>x.house===h.house).length;
+            let allowSameHouse = houseCount>5;
+            if(!housesInHeat.has(h.house) || allowSameHouse){
+                heat.push(h);
+                housesInHeat.add(h.house);
+                shuffled.splice(i,1);
+            } else { i++; }
+        }
+        // Ensure minimum 2 per heat
+        while(heat.length<2 && shuffled.length){
+            heat.push(shuffled.shift());
+        }
+        heats.push(heat);
     }
 
+    // Handle leftover single horse
+    if(heats.length>1 && heats[heats.length-1].length === 1){
+        let leftover = heats.pop()[0];
+        // Add to previous heat if less than 3
+        if(heats[heats.length-1].length < 3){
+            heats[heats.length-1].push(leftover);
+        } else {
+            // Merge with last heat anyway
+            heats[heats.length-1].push(leftover);
+        }
+    }
+
+    // Display heats
     heats.forEach((h,i)=>{
-      const d=document.createElement("div");
-      d.className="race";
-      d.innerHTML=`<strong>Heat ${i+1}</strong><br>Horses racing (${h.length}):<ul>`;
-      h.forEach(x=>d.innerHTML+=`<li>${x.name} (${x.house})</li>`);
-      d.innerHTML+="</ul>";
-      drawResults.appendChild(d);
+        const d=document.createElement("div");
+        d.className="race";
+        d.innerHTML=`<strong>Heat ${i+1}</strong><br>Horses racing (${h.length}):<ul>`;
+        h.forEach(x=>d.innerHTML+=`<li>${x.name} (${x.house})</li>`);
+        d.innerHTML+="</ul>";
+        drawResults.appendChild(d);
     });
   }
 
@@ -235,7 +251,7 @@ window.onload = function() {
     location.reload();
   }
 
-  // Expose to global
+  // Expose globally
   window.addHorses=addHorses;
   window.removeHorse=removeHorse;
   window.addRace=addRace;
@@ -248,7 +264,7 @@ window.onload = function() {
   updateHouses();
   renderHorseList();
   renderRaces();
-  generateAutoDraw(); // pre-generate on load
+  generateAutoDraw();
 };
 </script>
 

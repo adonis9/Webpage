@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Horse Draw Manager - Automatic</title>
+<title>Horse Draw Manager - Final</title>
 <style>
 body { font-family: Arial, sans-serif; background:#f4f6f8; padding:20px; }
 h1 { text-align:center; }
@@ -13,6 +13,7 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 .delete { background:#e74c3c; }
 .draw { background:#27ae60; }
 .race { border:1px solid #ddd; padding:10px; margin-top:10px; border-radius:5px; }
+.horse-item { display:flex; justify-content:space-between; margin-bottom:3px; }
 </style>
 </head>
 <body>
@@ -29,7 +30,7 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 <!-- APP CONTENT -->
 <div id="appContent" style="display:none;">
 
-<h1>🐎 Horse Draw Manager - Automatic</h1>
+<h1>🐎 Horse Draw Manager - Final</h1>
 <button class="delete" onclick="deleteAll()">Delete All Data</button>
 
 <div class="section">
@@ -38,6 +39,11 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 <select id="houseSelect"></select>
 <input id="newHouse" placeholder="Or new house name">
 <button onclick="addHorses()">Add Horse(s)</button>
+</div>
+
+<div class="section">
+<h2>Horses List (Remove from Draw if Not Participating)</h2>
+<div id="horseList"></div>
 </div>
 
 <div class="section">
@@ -56,6 +62,7 @@ window.onload = function() {
   const accessCode = document.getElementById("accessCode");
   const error = document.getElementById("error");
   const drawResults = document.getElementById("drawResults");
+  const horseListDiv = document.getElementById("horseList");
 
   const SECRET_CODE = "HORSE2026";
   if (sessionStorage.getItem("accessGranted")) unlock(true);
@@ -89,6 +96,7 @@ window.onload = function() {
   function save(){
     localStorage.setItem("horses",JSON.stringify(horses));
     updateHouses();
+    renderHorseList();
   }
 
   function updateHouses(){
@@ -114,9 +122,26 @@ window.onload = function() {
     save();
   }
 
+  function removeHorse(index){
+    if(!confirm("Remove this horse from draw?")) return;
+    horses.splice(index,1);
+    save();
+  }
+
+  function renderHorseList(){
+    horseListDiv.innerHTML="";
+    horses.forEach((h,i)=>{
+      const div = document.createElement("div");
+      div.className="horse-item";
+      div.innerHTML=`<span>${h.name} (${h.house})</span> 
+      <button onclick="removeHorse(${i})">Remove</button>`;
+      horseListDiv.appendChild(div);
+    });
+  }
+
   function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
 
-  // Automatic draw
+  // Automatic draw respecting same-house rules
   function generateAutoDraw(){
     drawResults.innerHTML="";
     if(horses.length < 2) return alert("Not enough horses to generate draw.");
@@ -165,10 +190,12 @@ window.onload = function() {
   }
 
   window.addHorses = addHorses;
+  window.removeHorse = removeHorse;
   window.generateAutoDraw = generateAutoDraw;
   window.deleteAll = deleteAll;
 
   updateHouses();
+  renderHorseList();
 };
 </script>
 

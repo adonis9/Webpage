@@ -10,8 +10,9 @@
   .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
   input, button, select { padding: 8px; margin: 5px 0; width: 100%; }
   button { background: #2c3e50; color: white; border: none; cursor: pointer; }
-  .race { border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 5px; }
+  .race { border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 5px; background: #fff; }
   .horse { padding: 5px; }
+  .leftovers { border: 1px solid #e74c3c; padding: 10px; border-radius: 5px; background: #ffe6e6; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -33,8 +34,9 @@
 
 <div class="section">
   <h2>Races</h2>
-  <button onclick="makeDraw()">Make Draw</button>
+  <button onclick="makeDraw()">Make Draw / Redo Draw</button>
   <div id="races"></div>
+  <div id="leftovers"></div>
 </div>
 
 <script>
@@ -84,11 +86,12 @@ function shuffle(array) {
   return array;
 }
 
-// Draw races based on rules
+// Make draw respecting rules
 function makeDraw() {
   races = []; // reset previous races
   const horsePool = [...horses];
   shuffle(horsePool);
+  let leftovers = [];
 
   while (horsePool.length >= 2) {
     let race = [];
@@ -103,21 +106,28 @@ function makeDraw() {
       }
     }
 
-    // Remove assigned horses from pool
-    race.forEach(h => {
-      const index = horsePool.indexOf(h);
-      if (index > -1) horsePool.splice(index, 1);
-    });
-
-    if (race.length >= 2) races.push(race);
-    else break; // stop if remaining horses can't form min 2
+    if (race.length >= 2) {
+      // Remove assigned horses from pool
+      race.forEach(h => {
+        const index = horsePool.indexOf(h);
+        if (index > -1) horsePool.splice(index, 1);
+      });
+      races.push(race);
+    } else {
+      // Horses can't form a valid race
+      leftovers.push(...horsePool);
+      break;
+    }
   }
 
+  // Any remaining horses in pool are leftovers
+  if (horsePool.length > 0) leftovers.push(...horsePool);
+
   save();
-  render();
+  render(leftovers);
 }
 
-function render() {
+function render(leftovers=[]) {
   const houseSelect = document.getElementById("horseHouseSelect");
   houseSelect.innerHTML = "";
   houses.forEach(h => {
@@ -130,24 +140,32 @@ function render() {
   racesDiv.innerHTML = "";
   if (races.length === 0) {
     racesDiv.innerHTML = "<p>No races drawn yet.</p>";
-    return;
   }
 
   races.forEach((race, rIndex) => {
     const div = document.createElement("div");
     div.className = "race";
     div.innerHTML = `<strong>Race ${rIndex + 1}</strong>`;
-
     race.forEach((h, i) => {
       div.innerHTML += `<div class="horse">${i + 1}. ${h.name} (House ${h.house})</div>`;
     });
-
     racesDiv.appendChild(div);
   });
+
+  const leftoversDiv = document.getElementById("leftovers");
+  leftoversDiv.innerHTML = "";
+  if (leftovers.length > 0) {
+    const div = document.createElement("div");
+    div.className = "leftovers";
+    div.innerHTML = "<strong>Leftover Horses:</strong>";
+    leftovers.forEach(h => {
+      div.innerHTML += `<div class="horse">${h.name} (House ${h.house})</div>`;
+    });
+    leftoversDiv.appendChild(div);
+  }
 }
 
 render();
 </script>
-
 </body>
 </html>

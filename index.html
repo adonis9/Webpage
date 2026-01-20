@@ -83,7 +83,6 @@ window.onload = function() {
   }
   window.unlock = unlock;
 
-  // Preloaded horses
   let horses = [];
   let races = [];
   const preload=[
@@ -108,7 +107,7 @@ window.onload = function() {
     updateHouses();
     renderHorseList();
     renderRaces();
-    generateAutoDraw(); // auto-update draw live
+    generateAutoDraw();
   }
 
   function updateHouses(){
@@ -202,9 +201,11 @@ window.onload = function() {
 
     let shuffled = shuffle([...horses]);
     let heats = [];
+
     while(shuffled.length){
         let heat=[];
         let housesInHeat = new Set();
+
         for(let i=0;i<shuffled.length && heat.length<3;){
             let h = shuffled[i];
             let houseCount = shuffled.filter(x=>x.house===h.house).length;
@@ -215,23 +216,20 @@ window.onload = function() {
                 shuffled.splice(i,1);
             } else { i++; }
         }
-        // Ensure minimum 2 per heat
+
+        // Fill to minimum 2
         while(heat.length<2 && shuffled.length){
             heat.push(shuffled.shift());
         }
+
         heats.push(heat);
     }
 
-    // Handle leftover single horse
-    if(heats.length>1 && heats[heats.length-1].length === 1){
-        let leftover = heats.pop()[0];
-        // Add to previous heat if less than 3
-        if(heats[heats.length-1].length < 3){
-            heats[heats.length-1].push(leftover);
-        } else {
-            // Merge with last heat anyway
-            heats[heats.length-1].push(leftover);
-        }
+    // Merge last heat if it has 1 horse
+    if(heats.length>1 && heats[heats.length-1].length===1){
+        let lastHorse = heats.pop()[0];
+        let prevHeat = heats[heats.length-1];
+        prevHeat.push(lastHorse); // always safe
     }
 
     // Display heats

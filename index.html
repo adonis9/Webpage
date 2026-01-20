@@ -1,21 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Horse Draw Manager</title>
-
-  <style>
-    body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; }
-    h1 { text-align: center; }
-    .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-    input, select, button, textarea { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
-    button { background: #2c3e50; color: white; border: none; cursor: pointer; }
-    #deleteAllBtn { background: #e74c3c; color: white; margin-bottom: 20px; }
-    .race { border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 5px; }
-    .horse { padding: 5px; }
-    .drawBtn { background: #27ae60; margin-top: 10px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Horse Draw Manager</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; }
+  h1 { text-align: center; }
+  .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+  input, select, button, textarea { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+  button { background: #2c3e50; color: white; border: none; cursor: pointer; }
+  #deleteAllBtn { background: #e74c3c; color: white; margin-bottom: 20px; }
+  .race { border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 5px; }
+  .horse { padding: 5px; }
+  .drawBtn { background: #27ae60; margin-top: 10px; }
+  .editBtn { background: #f39c12; margin-left: 5px; }
+</style>
 </head>
 
 <body>
@@ -24,7 +24,7 @@
 <button id="deleteAllBtn">Delete All Data</button>
 
 <div class="section">
-  <h2>Add Horse(s)</h2>
+  <h2>Add/Edit Horse(s)</h2>
   <textarea id="horseNames" placeholder="Enter horse names, one per line"></textarea>
   <select id="houseSelect"></select>
   <input id="newHouse" placeholder="Or type new house name">
@@ -47,12 +47,34 @@ let horses = [];
 let races = [];
 let horseRaceCount = {}; // track how many races each horse is in
 
-// Load from localStorage
+// Preload houses and horses
+function preloadHorses() {
+  const preloadData = [
+    { house: "Koxera Monte Barro", horses: ["Sabe Na Mundo", "Arbisa", "Pisadelo", "Fradu Fra"] },
+    { house: "Koxera Nene Lapinha", horses: ["Forca Imigrante", "America Dreams", "Bless"] },
+    { house: "Koxera Lele", horses: ["Miss Fogo"] },
+    { house: "Clube Juvenil", horses: ["Rainha Das Ilhas"] },
+    { house: "Koxera de Neto", horses: ["Mestre Moita", "Showtime"] },
+    { house: "EECV", horses: ["Santiago Sweetie", "Djabraba BAYC", "Eytiana", "Comandate", "Cidade velha", "stylish"] }
+  ];
+
+  preloadData.forEach(houseData => {
+    houseData.horses.forEach(name => {
+      if(!horses.find(h => h.name === name)) {
+        horses.push({ name, house: houseData.house });
+        horseRaceCount[name] = 0;
+      }
+    });
+  });
+}
+
+// Load from localStorage or preload
 try {
   horses = JSON.parse(localStorage.getItem("horses")) || [];
   races = JSON.parse(localStorage.getItem("races")) || [];
   horseRaceCount = JSON.parse(localStorage.getItem("horseRaceCount")) || {};
-} catch(e) { console.warn("LocalStorage unavailable"); }
+  if(horses.length === 0) preloadHorses();
+} catch(e) { console.warn("LocalStorage unavailable"); preloadHorses(); }
 
 // Save all data
 function save() {
@@ -62,7 +84,7 @@ function save() {
   updateHouseDropdown();
 }
 
-// Update the house dropdown based on existing houses
+// Update house dropdown
 function updateHouseDropdown() {
   const houseSelect = document.getElementById("houseSelect");
   houseSelect.innerHTML = "";
@@ -75,21 +97,24 @@ function updateHouseDropdown() {
   });
 }
 
-// Add one or multiple horses
+// Add or edit horses
 function addHorses() {
   let house = document.getElementById("newHouse").value.trim();
-  if (!house) {
-    house = document.getElementById("houseSelect").value;
-  }
-  if (!house) return alert("Please select or enter a house");
+  if(!house) house = document.getElementById("houseSelect").value;
+  if(!house) return alert("Please select or enter a house");
 
   const namesText = document.getElementById("horseNames").value.trim();
-  if (!namesText) return alert("Enter at least one horse name");
+  if(!namesText) return alert("Enter at least one horse name");
 
   const names = namesText.split("\n").map(n => n.trim()).filter(n => n);
   names.forEach(name => {
-    horses.push({ name, house });
-    horseRaceCount[name] = 0;
+    let existing = horses.find(h => h.name === name);
+    if(existing) {
+      existing.house = house; // edit house if horse exists
+    } else {
+      horses.push({ name, house });
+      horseRaceCount[name] = 0;
+    }
   });
 
   document.getElementById("horseNames").value = "";
@@ -101,18 +126,18 @@ function addHorses() {
 // Add race
 function addRace() {
   const name = document.getElementById("raceName").value.trim();
-  if (!name) return alert("Enter a race name");
+  if(!name) return alert("Enter a race name");
   races.push({ name, horses: [] });
   document.getElementById("raceName").value = "";
   save();
   render();
 }
 
-// Add horse to race with rules
+// Add horse to race
 function addHorseToRace(r, hIndex) {
   const horse = horses[hIndex];
-  if (races[r].horses.includes(horse)) return alert("Horse already in this race");
-  if (horseRaceCount[horse.name] >= 3) return alert(`${horse.name} is already in 3 races`);
+  if(races[r].horses.includes(horse)) return alert("Horse already in this race");
+  if(horseRaceCount[horse.name] >= 3) return alert(`${horse.name} is already in 3 races`);
   races[r].horses.push(horse);
   horseRaceCount[horse.name]++;
   save();
@@ -123,24 +148,24 @@ function addHorseToRace(r, hIndex) {
 function removeHorseFromRace(r, hIndex) {
   const horse = races[r].horses[hIndex];
   horseRaceCount[horse.name]--;
-  races[r].horses.splice(hIndex, 1);
+  races[r].horses.splice(hIndex,1);
   save();
   render();
 }
 
-// Draw (shuffle) horses in race
+// Draw race
 function drawRace(r) {
   races[r].horses = shuffleArray(races[r].horses);
   save();
   render();
 }
 
-// Fisher-Yates shuffle
+// Shuffle
 function shuffleArray(array) {
   let arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+  for(let i = arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i], arr[j]] = [arr[j],arr[i]];
   }
   return arr;
 }
@@ -150,25 +175,23 @@ function render() {
   const racesDiv = document.getElementById("races");
   racesDiv.innerHTML = "";
 
-  races.forEach((race, rIndex) => {
+  races.forEach((race,rIndex)=>{
     const div = document.createElement("div");
     div.className = "race";
     div.innerHTML = `<strong>${race.name}</strong>`;
 
-    race.horses.forEach((h, hIndex) => {
+    race.horses.forEach((h,hIndex)=>{
       div.innerHTML += `
         <div class="horse">
           ${h.name} (House ${h.house})
-          <button onclick="removeHorseFromRace(${rIndex}, ${hIndex})">Remove</button>
+          <button class="editBtn" onclick="editHorsePrompt(${hIndex})">Edit</button>
+          <button onclick="removeHorseFromRace(${rIndex},${hIndex})">Remove</button>
         </div>`;
     });
 
-    // Dropdown: only horses from same house that are eligible
     const select = document.createElement("select");
-    const horseOptions = horses.filter(h =>
-      (!race.horses.includes(h)) && (horseRaceCount[h.name] < 3)
-    );
-    horseOptions.forEach(h => {
+    const horseOptions = horses.filter(h => (!race.horses.includes(h)) && horseRaceCount[h.name]<3);
+    horseOptions.forEach(h=>{
       const o = document.createElement("option");
       o.value = horses.indexOf(h);
       o.textContent = `${h.name} (House ${h.house})`;
@@ -177,12 +200,12 @@ function render() {
 
     const btnAdd = document.createElement("button");
     btnAdd.textContent = "Add Horse to Race";
-    btnAdd.onclick = () => addHorseToRace(rIndex, select.value);
+    btnAdd.onclick = ()=>addHorseToRace(rIndex,select.value);
 
     const btnDraw = document.createElement("button");
     btnDraw.textContent = "Draw Race";
     btnDraw.className = "drawBtn";
-    btnDraw.onclick = () => drawRace(rIndex);
+    btnDraw.onclick = ()=>drawRace(rIndex);
 
     div.appendChild(select);
     div.appendChild(btnAdd);
@@ -193,9 +216,20 @@ function render() {
   updateHouseDropdown();
 }
 
+// Edit horse name
+function editHorsePrompt(hIndex) {
+  const horse = horses[hIndex];
+  const newName = prompt("Edit horse name:", horse.name);
+  if(newName && newName.trim()!=="" && newName!==horse.name) {
+    horse.name = newName.trim();
+    save();
+    render();
+  }
+}
+
 // Delete all data
-document.getElementById("deleteAllBtn").addEventListener("click", () => {
-  if (!confirm("Are you sure you want to delete ALL data?")) return;
+document.getElementById("deleteAllBtn").addEventListener("click",()=>{
+  if(!confirm("Are you sure you want to delete ALL data?")) return;
   horses = [];
   races = [];
   horseRaceCount = {};

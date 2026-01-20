@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Horse Draw Manager - Final</title>
+<title>Horse Draw Manager - Live Regenerate</title>
 <style>
 body { font-family: Arial, sans-serif; background:#f4f6f8; padding:20px; }
 h1 { text-align:center; }
@@ -30,7 +30,7 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 <!-- APP CONTENT -->
 <div id="appContent" style="display:none;">
 
-<h1>🐎 Horse Draw Manager - Final</h1>
+<h1>🐎 Horse Draw Manager - Live Regenerate</h1>
 <button class="delete" onclick="deleteAll()">Delete All Data</button>
 
 <div class="section">
@@ -42,13 +42,20 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 </div>
 
 <div class="section">
-<h2>Horses List (Remove from Draw if Not Participating)</h2>
+<h2>Horses List (Remove if Not Participating)</h2>
 <div id="horseList"></div>
 </div>
 
 <div class="section">
+<h2>Manual Race Creation</h2>
+<input id="raceName" placeholder="Race name">
+<button onclick="addRace()">Add Race</button>
+<div id="races"></div>
+</div>
+
+<div class="section">
 <h2>🏁 Automatic Draw Results</h2>
-<button class="draw" onclick="generateAutoDraw()">Generate Automatic Draw</button>
+<button class="draw" onclick="generateAutoDraw()">Regenerate Draw</button>
 <div id="drawResults"></div>
 </div>
 
@@ -56,13 +63,13 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 
 <script>
 window.onload = function() {
-  // DOM Elements
   const lockScreen = document.getElementById("lockScreen");
   const appContent = document.getElementById("appContent");
   const accessCode = document.getElementById("accessCode");
   const error = document.getElementById("error");
   const drawResults = document.getElementById("drawResults");
   const horseListDiv = document.getElementById("horseList");
+  const racesDiv = document.getElementById("races");
 
   const SECRET_CODE = "HORSE2026";
   if (sessionStorage.getItem("accessGranted")) unlock(true);
@@ -76,8 +83,9 @@ window.onload = function() {
   }
   window.unlock = unlock;
 
-  // Preloaded data
+  // Preloaded horses
   let horses = [];
+  let races = [];
   const preload=[
     ["Koxera Monte Barro",["Sabe Na Mundo","Arbisa","Pisadelo","Fradu Fra"]],
     ["Koxera Nene Lapinha",["Forca Imigrante","America Dreams","Bless"]],
@@ -89,14 +97,18 @@ window.onload = function() {
 
   if(localStorage.getItem("horses")){
     horses = JSON.parse(localStorage.getItem("horses"));
+    races = JSON.parse(localStorage.getItem("races")) || [];
   } else {
     preload.forEach(h => h[1].forEach(n => horses.push({name:n,house:h[0]})));
   }
 
   function save(){
     localStorage.setItem("horses",JSON.stringify(horses));
+    localStorage.setItem("races",JSON.stringify(races));
     updateHouses();
     renderHorseList();
+    renderRaces();
+    generateAutoDraw(); // auto-update draw
   }
 
   function updateHouses(){
@@ -139,44 +151,78 @@ window.onload = function() {
     });
   }
 
+  function addRace(){
+    let raceName = document.getElementById("raceName").value.trim();
+    if(!raceName) return alert("Race name required");
+    races.push({name: raceName, horses: []});
+    document.getElementById("raceName").value="";
+    save();
+  }
+
+  function addToRace(raceIndex, horseIndex){
+    const h = horses[horseIndex];
+    if(!races[raceIndex].horses.includes(h)) races[raceIndex].horses.push(h);
+    save();
+  }
+
+  function removeFromRace(rIndex,hIndex){
+    races[rIndex].horses.splice(hIndex,1);
+    save();
+  }
+
+  function renderRaces(){
+    racesDiv.innerHTML="";
+    races.forEach((r,ri)=>{
+      const div = document.createElement("div");
+      div.className="race";
+      div.innerHTML=`<strong>${r.name}</strong><br>`;
+      r.horses.forEach((h,hi)=>{
+        div.innerHTML+=`${h.name} (${h.house}) <button onclick="removeFromRace(${ri},${hi})">Remove</button><br>`;
+      });
+      const sel = document.createElement("select");
+      horses.forEach((h,i)=>{
+        const o = document.createElement("option");
+        o.value=i; o.textContent=`${h.name} (${h.house})`;
+        sel.appendChild(o);
+      });
+      const b = document.createElement("button");
+      b.textContent="Add Horse";
+      b.onclick=()=>addToRace(ri,sel.value);
+      div.appendChild(sel);
+      div.appendChild(b);
+      racesDiv.appendChild(div);
+    });
+  }
+
   function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
 
-  // Automatic draw respecting same-house rules
   function generateAutoDraw(){
     drawResults.innerHTML="";
-    if(horses.length < 2) return alert("Not enough horses to generate draw.");
+    if(horses.length<2) return;
 
     let shuffled = shuffle([...horses]);
     let heats = [];
-
     while(shuffled.length){
-      let heat = [];
+      let heat=[];
       let housesInHeat = new Set();
-
       for(let i=0;i<shuffled.length && heat.length<3;){
         let h = shuffled[i];
         let houseCount = shuffled.filter(x=>x.house===h.house).length;
-        let allowSameHouse = houseCount > 5;
-
+        let allowSameHouse = houseCount>5;
         if(!housesInHeat.has(h.house) || allowSameHouse){
           heat.push(h);
           housesInHeat.add(h.house);
           shuffled.splice(i,1);
         } else { i++; }
       }
-
-      while(heat.length<2 && shuffled.length){
-        heat.push(shuffled.shift());
-      }
-
+      while(heat.length<2 && shuffled.length) heat.push(shuffled.shift());
       heats.push(heat);
     }
 
     heats.forEach((h,i)=>{
       const d=document.createElement("div");
       d.className="race";
-      d.innerHTML=`<strong>Heat ${i+1}</strong><br>
-      Horses racing (${h.length}):<ul>`;
+      d.innerHTML=`<strong>Heat ${i+1}</strong><br>Horses racing (${h.length}):<ul>`;
       h.forEach(x=>d.innerHTML+=`<li>${x.name} (${x.house})</li>`);
       d.innerHTML+="</ul>";
       drawResults.appendChild(d);
@@ -189,13 +235,20 @@ window.onload = function() {
     location.reload();
   }
 
-  window.addHorses = addHorses;
-  window.removeHorse = removeHorse;
-  window.generateAutoDraw = generateAutoDraw;
-  window.deleteAll = deleteAll;
+  // Expose to global
+  window.addHorses=addHorses;
+  window.removeHorse=removeHorse;
+  window.addRace=addRace;
+  window.addToRace=addToRace;
+  window.removeFromRace=removeFromRace;
+  window.generateAutoDraw=generateAutoDraw;
+  window.deleteAll=deleteAll;
 
+  // Initialize
   updateHouses();
   renderHorseList();
+  renderRaces();
+  generateAutoDraw(); // pre-generate on load
 };
 </script>
 

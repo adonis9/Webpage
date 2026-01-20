@@ -6,43 +6,15 @@
   <title>Horse Draw Manager</title>
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
+    body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; }
     h1 { text-align: center; }
-    .section {
-      background: white;
-      padding: 15px;
-      margin-bottom: 20px;
-      border-radius: 8px;
-    }
-    input, select, button {
-      padding: 8px;
-      margin: 5px 0;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    button {
-      background: #2c3e50;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    #deleteAllBtn {
-      background: #e74c3c;
-      color: white;
-      margin-bottom: 20px;
-    }
-    .race {
-      border: 1px solid #ddd;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 5px;
-    }
+    .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+    input, select, button { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+    button { background: #2c3e50; color: white; border: none; cursor: pointer; }
+    #deleteAllBtn { background: #e74c3c; color: white; margin-bottom: 20px; }
+    .race { border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 5px; }
     .horse { padding: 5px; }
+    .drawBtn { background: #27ae60; margin-top: 10px; }
   </style>
 </head>
 
@@ -72,34 +44,36 @@
 <script>
 let horses = [];
 let races = [];
+let horseRaceCount = {}; // track how many races each horse is in
 
-// Load data from localStorage if it exists
+// Load from localStorage
 try {
   horses = JSON.parse(localStorage.getItem("horses")) || [];
   races = JSON.parse(localStorage.getItem("races")) || [];
-} catch (e) {
-  console.warn("LocalStorage unavailable — starting fresh");
-}
+  horseRaceCount = JSON.parse(localStorage.getItem("horseRaceCount")) || {};
+} catch(e) { console.warn("LocalStorage unavailable"); }
 
-// Save data to localStorage
+// Save all data
 function save() {
   localStorage.setItem("horses", JSON.stringify(horses));
   localStorage.setItem("races", JSON.stringify(races));
+  localStorage.setItem("horseRaceCount", JSON.stringify(horseRaceCount));
 }
 
-// Add a horse
+// Add horse
 function addHorse() {
   const name = document.getElementById("horseName").value.trim();
   const house = document.getElementById("horseHouse").value.trim();
   if (!name || !house) return alert("Fill all fields");
   horses.push({ name, house });
+  horseRaceCount[name] = 0; // initialize race count
   document.getElementById("horseName").value = "";
   document.getElementById("horseHouse").value = "";
   save();
   render();
 }
 
-// Add a race
+// Add race
 function addRace() {
   const name = document.getElementById("raceName").value.trim();
   if (!name) return alert("Enter a race name");
@@ -109,21 +83,50 @@ function addRace() {
   render();
 }
 
-// Add horse to a race
-function addHorseToRace(r, h) {
-  races[r].horses.push(horses[h]);
+// Add horse to race with rules
+function addHorseToRace(r, hIndex) {
+  const horse = horses[hIndex];
+
+  // Check if horse is already in this race
+  if (races[r].horses.includes(horse)) return alert("Horse already in this race");
+
+  // Check min/max races per horse
+  if (horseRaceCount[horse.name] >= 3) return alert(`${horse.name} is already in 3 races`);
+
+  // Optional: check min 2 races after adding, but we'll enforce max 3 for now
+  races[r].horses.push(horse);
+  horseRaceCount[horse.name]++;
   save();
   render();
 }
 
-// Remove horse from a race
-function removeHorseFromRace(r, h) {
-  races[r].horses.splice(h, 1);
+// Remove horse from race
+function removeHorseFromRace(r, hIndex) {
+  const horse = races[r].horses[hIndex];
+  horseRaceCount[horse.name]--;
+  races[r].horses.splice(hIndex, 1);
   save();
   render();
 }
 
-// Render all races and horses
+// Draw (shuffle) horses in race
+function drawRace(r) {
+  races[r].horses = shuffleArray(races[r].horses);
+  save();
+  render();
+}
+
+// Fisher-Yates shuffle
+function shuffleArray(array) {
+  let arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Render races
 function render() {
   const racesDiv = document.getElementById("races");
   racesDiv.innerHTML = "";
@@ -133,46 +136,51 @@ function render() {
     div.className = "race";
     div.innerHTML = `<strong>${race.name}</strong>`;
 
-    // List horses in race
+    // Show horses in race
     race.horses.forEach((h, hIndex) => {
       div.innerHTML += `
         <div class="horse">
           ${h.name} (House ${h.house})
-          <button onclick="removeHorseFromRace(${rIndex}, ${hIndex})">
-            Remove
-          </button>
+          <button onclick="removeHorseFromRace(${rIndex}, ${hIndex})">Remove</button>
         </div>`;
     });
 
-    // Dropdown to add horses to race
+    // Dropdown: only show horses from the same house that can still join
     const select = document.createElement("select");
-    horses.forEach((h, i) => {
+    const horseOptions = horses.filter(h =>
+      (!race.horses.includes(h)) && (horseRaceCount[h.name] < 3)
+    );
+    horseOptions.forEach((h, i) => {
       const o = document.createElement("option");
-      o.value = i;
+      o.value = horses.indexOf(h);
       o.textContent = `${h.name} (House ${h.house})`;
       select.appendChild(o);
     });
 
-    const btn = document.createElement("button");
-    btn.textContent = "Add Horse to Race";
-    btn.onclick = () => addHorseToRace(rIndex, select.value);
+    const btnAdd = document.createElement("button");
+    btnAdd.textContent = "Add Horse to Race";
+    btnAdd.onclick = () => addHorseToRace(rIndex, select.value);
+
+    const btnDraw = document.createElement("button");
+    btnDraw.textContent = "Draw Race";
+    btnDraw.className = "drawBtn";
+    btnDraw.onclick = () => drawRace(rIndex);
 
     div.appendChild(select);
-    div.appendChild(btn);
+    div.appendChild(btnAdd);
+    div.appendChild(btnDraw);
     racesDiv.appendChild(div);
   });
 }
 
 // Delete all data
 document.getElementById("deleteAllBtn").addEventListener("click", () => {
-  if (!confirm("Are you sure you want to delete ALL horses and races?")) return;
-
+  if (!confirm("Are you sure you want to delete ALL data?")) return;
   horses = [];
   races = [];
-  localStorage.removeItem("horses");
-  localStorage.removeItem("races");
+  horseRaceCount = {};
+  localStorage.clear();
   render();
-  alert("All data has been deleted!");
 });
 
 // Initial render

@@ -6,15 +6,14 @@
 <title>Horse Draw Manager</title>
 
 <style>
-body { font-family: Arial, sans-serif; background: #f4f6f8; padding: 20px; }
-h1 { text-align: center; }
-.section { background: #fff; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-input, select, textarea, button { width: 100%; padding: 8px; margin: 5px 0; }
-button { background: #2c3e50; color: white; border: none; cursor: pointer; }
-.delete { background: #e74c3c; }
-.draw { background: #27ae60; }
-.edit { background: #f39c12; }
-.race { border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 5px; }
+body { font-family: Arial, sans-serif; background:#f4f6f8; padding:20px; }
+h1 { text-align:center; }
+.section { background:white; padding:15px; margin-bottom:20px; border-radius:8px; }
+input, select, textarea, button { width:100%; padding:8px; margin:5px 0; }
+button { background:#2c3e50; color:white; border:none; cursor:pointer; }
+.delete { background:#e74c3c; }
+.draw { background:#27ae60; }
+.race { border:1px solid #ddd; padding:10px; margin-top:10px; border-radius:5px; }
 </style>
 </head>
 
@@ -44,148 +43,173 @@ button { background: #2c3e50; color: white; border: none; cursor: pointer; }
 
 <div class="section">
 <h2>Race Results</h2>
-<button class="draw" onclick="generateResults()">Show Results</button>
+<button class="draw" onclick="generateResults()">Generate Race Results</button>
 <div id="results"></div>
 </div>
 
-<script>
-let horses = [];
-let races = [];
-let raceCount = {};
+<div class="section">
+<h2>🏆 Final Draw Results</h2>
+<button class="draw" onclick="finalResults()">Show Final Results</button>
+<div id="finalResults"></div>
+</div>
 
-// PRELOAD DATA
-const preload = [
-  ["Koxera Monte Barro", ["Sabe Na Mundo","Arbisa","Pisadelo","Fradu Fra"]],
-  ["Koxera Nene Lapinha", ["Forca Imigrante","America Dreams","Bless"]],
-  ["Koxera Lele", ["Miss Fogo"]],
-  ["Clube Juvenil", ["Rainha Das Ilhas"]],
-  ["Koxera de Neto", ["Mestre Moita","Showtime"]],
-  ["EECV", ["Santiago Sweetie","Djabraba BAYC","Eytiana","Comandate","Cidade velha","stylish"]]
+<script>
+let horses=[], races=[], raceCount={}, raceResults=[];
+
+const preload=[
+["Koxera Monte Barro",["Sabe Na Mundo","Arbisa","Pisadelo","Fradu Fra"]],
+["Koxera Nene Lapinha",["Forca Imigrante","America Dreams","Bless"]],
+["Koxera Lele",["Miss Fogo"]],
+["Clube Juvenil",["Rainha Das Ilhas"]],
+["Koxera de Neto",["Mestre Moita","Showtime"]],
+["EECV",["Santiago Sweetie","Djabraba BAYC","Eytiana","Comandate","Cidade velha","stylish"]]
 ];
 
-// LOAD OR INIT
 if(localStorage.getItem("horses")){
-  horses = JSON.parse(localStorage.getItem("horses"));
-  races = JSON.parse(localStorage.getItem("races"));
-  raceCount = JSON.parse(localStorage.getItem("raceCount"));
+horses=JSON.parse(localStorage.getItem("horses"));
+races=JSON.parse(localStorage.getItem("races"));
+raceCount=JSON.parse(localStorage.getItem("raceCount"));
+raceResults=JSON.parse(localStorage.getItem("raceResults"))||[];
 }else{
-  preload.forEach(h=>{
-    h[1].forEach(n=>{
-      horses.push({name:n, house:h[0]});
-      raceCount[n]=0;
-    });
-  });
+preload.forEach(h=>{
+h[1].forEach(n=>{
+horses.push({name:n,house:h[0]});
+raceCount[n]=0;
+});
+});
 }
 
 function save(){
-  localStorage.setItem("horses",JSON.stringify(horses));
-  localStorage.setItem("races",JSON.stringify(races));
-  localStorage.setItem("raceCount",JSON.stringify(raceCount));
-  updateHouses();
+localStorage.setItem("horses",JSON.stringify(horses));
+localStorage.setItem("races",JSON.stringify(races));
+localStorage.setItem("raceCount",JSON.stringify(raceCount));
+localStorage.setItem("raceResults",JSON.stringify(raceResults));
+updateHouses();
 }
 
 function updateHouses(){
-  const hs=[...new Set(horses.map(h=>h.house))];
-  const sel=document.getElementById("houseSelect");
-  sel.innerHTML="";
-  hs.forEach(h=>{
-    const o=document.createElement("option");
-    o.value=h; o.textContent=h;
-    sel.appendChild(o);
-  });
+const hs=[...new Set(horses.map(h=>h.house))];
+const sel=document.getElementById("houseSelect");
+sel.innerHTML="";
+hs.forEach(h=>{
+const o=document.createElement("option");
+o.value=h;o.textContent=h;
+sel.appendChild(o);
+});
 }
 
 function addHorses(){
-  let house=document.getElementById("newHouse").value.trim() || document.getElementById("houseSelect").value;
-  if(!house) return alert("House required");
-  document.getElementById("horseNames").value.split("\n").forEach(n=>{
-    n=n.trim();
-    if(n && !horses.find(h=>h.name===n)){
-      horses.push({name:n,house});
-      raceCount[n]=0;
-    }
-  });
-  document.getElementById("horseNames").value="";
-  document.getElementById("newHouse").value="";
-  save(); render();
+let house=document.getElementById("newHouse").value.trim()||document.getElementById("houseSelect").value;
+if(!house)return alert("House required");
+document.getElementById("horseNames").value.split("\n").forEach(n=>{
+n=n.trim();
+if(n&&!horses.find(h=>h.name===n)){
+horses.push({name:n,house});
+raceCount[n]=0;
+}
+});
+document.getElementById("horseNames").value="";
+document.getElementById("newHouse").value="";
+save();render();
 }
 
 function addRace(){
-  const n=document.getElementById("raceName").value.trim();
-  if(!n) return;
-  races.push({name:n,horses:[]});
-  document.getElementById("raceName").value="";
-  save(); render();
+const n=document.getElementById("raceName").value.trim();
+if(!n)return;
+races.push({name:n,horses:[]});
+document.getElementById("raceName").value="";
+save();render();
 }
 
 function addToRace(r,i){
-  const h=horses[i];
-  if(raceCount[h.name]>=3) return alert("Max 3 races per horse");
-  races[r].horses.push(h);
-  raceCount[h.name]++;
-  save(); render();
+const h=horses[i];
+if(raceCount[h.name]>=3)return alert("Max 3 races per horse");
+races[r].horses.push(h);
+raceCount[h.name]++;
+save();render();
 }
 
 function removeFromRace(r,i){
-  raceCount[races[r].horses[i].name]--;
-  races[r].horses.splice(i,1);
-  save(); render();
+raceCount[races[r].horses[i].name]--;
+races[r].horses.splice(i,1);
+save();render();
 }
 
-function shuffle(arr){
-  return arr.sort(()=>Math.random()-0.5);
-}
+function shuffle(a){return a.sort(()=>Math.random()-0.5);}
 
 function render(){
-  const div=document.getElementById("races");
-  div.innerHTML="";
-  races.forEach((r,ri)=>{
-    const d=document.createElement("div");
-    d.className="race";
-    d.innerHTML=`<strong>${r.name}</strong>`;
-    r.horses.forEach((h,hi)=>{
-      d.innerHTML+=`<div>${h.name} (${h.house})
-      <button onclick="removeFromRace(${ri},${hi})">Remove</button></div>`;
-    });
-    const sel=document.createElement("select");
-    horses.filter(h=>!r.horses.includes(h)&&raceCount[h.name]<3)
-    .forEach(h=>{
-      const o=document.createElement("option");
-      o.value=horses.indexOf(h);
-      o.textContent=`${h.name} (${h.house})`;
-      sel.appendChild(o);
-    });
-    d.appendChild(sel);
-    const b=document.createElement("button");
-    b.textContent="Add Horse";
-    b.onclick=()=>addToRace(ri,sel.value);
-    d.appendChild(b);
-    div.appendChild(d);
-  });
-  updateHouses();
+const div=document.getElementById("races");
+div.innerHTML="";
+races.forEach((r,ri)=>{
+const d=document.createElement("div");
+d.className="race";
+d.innerHTML=`<strong>${r.name}</strong>`;
+r.horses.forEach((h,hi)=>{
+d.innerHTML+=`<div>${h.name} (${h.house})
+<button onclick="removeFromRace(${ri},${hi})">Remove</button></div>`;
+});
+const sel=document.createElement("select");
+horses.filter(h=>!r.horses.includes(h)&&raceCount[h.name]<3)
+.forEach(h=>{
+const o=document.createElement("option");
+o.value=horses.indexOf(h);
+o.textContent=`${h.name} (${h.house})`;
+sel.appendChild(o);
+});
+d.appendChild(sel);
+const b=document.createElement("button");
+b.textContent="Add Horse";
+b.onclick=()=>addToRace(ri,sel.value);
+d.appendChild(b);
+div.appendChild(d);
+});
+updateHouses();
 }
 
 function generateResults(){
-  const res=document.getElementById("results");
-  res.innerHTML="";
-  races.forEach(r=>{
-    if(r.horses.length<2) return;
-    let shuffled=shuffle([...r.horses]);
-    let size=Math.random()<0.3?2:3;
-    let chosen=shuffled.slice(0,Math.min(size,shuffled.length));
-    const d=document.createElement("div");
-    d.className="race";
-    d.innerHTML=`<strong>${r.name} Results</strong><ol>`;
-    chosen.forEach(h=>d.innerHTML+=`<li>${h.name} (${h.house})</li>`);
-    d.innerHTML+="</ol>";
-    res.appendChild(d);
-  });
+raceResults=[];
+const res=document.getElementById("results");
+res.innerHTML="";
+races.forEach(r=>{
+if(r.horses.length<2)return;
+let shuffled=shuffle([...r.horses]);
+let size=Math.random()<0.3?2:3;
+let chosen=shuffled.slice(0,Math.min(size,shuffled.length));
+raceResults.push({race:r.name,order:chosen});
+const d=document.createElement("div");
+d.className="race";
+d.innerHTML=`<strong>${r.name}</strong><ol>`;
+chosen.forEach(h=>d.innerHTML+=`<li>${h.name} (${h.house})</li>`);
+d.innerHTML+="</ol>";
+res.appendChild(d);
+});
+save();
+}
+
+function finalResults(){
+const scores={};
+horses.forEach(h=>scores[h.name]={house:h.house,points:0});
+raceResults.forEach(r=>{
+r.order.forEach((h,i)=>{
+if(i===0)scores[h.name].points+=3;
+if(i===1)scores[h.name].points+=2;
+if(i===2)scores[h.name].points+=1;
+});
+});
+const final=document.getElementById("finalResults");
+final.innerHTML="";
+Object.entries(scores)
+.sort((a,b)=>b[1].points-a[1].points)
+.forEach(([name,data])=>{
+if(data.points>0)
+final.innerHTML+=`<div>${name} (${data.house}) — <strong>${data.points} pts</strong></div>`;
+});
 }
 
 function deleteAll(){
-  if(!confirm("Delete everything?"))return;
-  localStorage.clear();
-  location.reload();
+if(!confirm("Delete everything?"))return;
+localStorage.clear();
+location.reload();
 }
 
 render();

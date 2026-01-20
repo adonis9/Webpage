@@ -1,171 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Horse Draw Manager</title>
-<style>
-  body { font-family: Arial, sans-serif; background: #f4f6f8; padding: 20px; }
-  h1 { text-align: center; }
-  .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-  input, button, select { padding: 8px; margin: 5px 0; width: 100%; }
-  button { background: #2c3e50; color: white; border: none; cursor: pointer; }
-  .race { border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 5px; background: #fff; }
-  .horse { padding: 5px; }
-  .leftovers { border: 1px solid #e74c3c; padding: 10px; border-radius: 5px; background: #ffe6e6; margin-top: 10px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Horse Draw Manager</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { text-align: center; }
+    .section {
+      background: white;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+    input, select, button {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      background: #2c3e50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    #deleteAllBtn {
+      background: #e74c3c;
+      color: white;
+      margin-bottom: 20px;
+    }
+    .race {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+    .horse { padding: 5px; }
+  </style>
 </head>
+
 <body>
 
 <h1>🐎 Horse Draw Manager</h1>
-
-<div class="section">
-  <h2>Add House</h2>
-  <input id="houseName" placeholder="House name">
-  <button onclick="addHouse()">Add House</button>
-</div>
+<button id="deleteAllBtn">Delete All Data</button>
 
 <div class="section">
   <h2>Add Horse</h2>
-  <select id="horseHouseSelect"></select>
   <input id="horseName" placeholder="Horse name">
+  <input id="horseHouse" placeholder="House">
   <button onclick="addHorse()">Add Horse</button>
 </div>
 
 <div class="section">
+  <h2>Create Race</h2>
+  <input id="raceName" placeholder="Race name">
+  <button onclick="addRace()">Add Race</button>
+</div>
+
+<div class="section">
   <h2>Races</h2>
-  <button onclick="makeDraw()">Make Draw / Redo Draw</button>
   <div id="races"></div>
-  <div id="leftovers"></div>
 </div>
 
 <script>
-let houses = [];
 let horses = [];
 let races = [];
 
-// Load from localStorage
+// Load data from localStorage if it exists
 try {
-  houses = JSON.parse(localStorage.getItem("houses")) || [];
   horses = JSON.parse(localStorage.getItem("horses")) || [];
   races = JSON.parse(localStorage.getItem("races")) || [];
-} catch (e) { console.warn("LocalStorage unavailable"); }
+} catch (e) {
+  console.warn("LocalStorage unavailable — starting fresh");
+}
 
+// Save data to localStorage
 function save() {
-  localStorage.setItem("houses", JSON.stringify(houses));
   localStorage.setItem("horses", JSON.stringify(horses));
   localStorage.setItem("races", JSON.stringify(races));
 }
 
-function addHouse() {
-  const name = document.getElementById("houseName").value.trim();
-  if (!name) return alert("Enter house name");
-  if (houses.includes(name)) return alert("House already exists");
-  houses.push(name);
-  document.getElementById("houseName").value = "";
-  save();
-  render();
-}
-
+// Add a horse
 function addHorse() {
   const name = document.getElementById("horseName").value.trim();
-  const house = document.getElementById("horseHouseSelect").value;
-  if (!name || !house) return alert("Enter horse name and select house");
+  const house = document.getElementById("horseHouse").value.trim();
+  if (!name || !house) return alert("Fill all fields");
   horses.push({ name, house });
   document.getElementById("horseName").value = "";
+  document.getElementById("horseHouse").value = "";
   save();
   render();
 }
 
-// Utility: shuffle array
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-}
-
-// Make draw respecting rules
-function makeDraw() {
-  races = []; // reset previous races
-  const horsePool = [...horses];
-  shuffle(horsePool);
-  let leftovers = [];
-
-  while (horsePool.length >= 2) {
-    let race = [];
-    let usedHouses = {};
-
-    for (let i = 0; i < horsePool.length && race.length < 3; i++) {
-      const horse = horsePool[i];
-      const houseCount = horses.filter(h => h.house === horse.house).length;
-      if (!usedHouses[horse.house] || houseCount > 5) {
-        race.push(horse);
-        usedHouses[horse.house] = true;
-      }
-    }
-
-    if (race.length >= 2) {
-      // Remove assigned horses from pool
-      race.forEach(h => {
-        const index = horsePool.indexOf(h);
-        if (index > -1) horsePool.splice(index, 1);
-      });
-      races.push(race);
-    } else {
-      // Horses can't form a valid race
-      leftovers.push(...horsePool);
-      break;
-    }
-  }
-
-  // Any remaining horses in pool are leftovers
-  if (horsePool.length > 0) leftovers.push(...horsePool);
-
+// Add a race
+function addRace() {
+  const name = document.getElementById("raceName").value.trim();
+  if (!name) return alert("Enter a race name");
+  races.push({ name, horses: [] });
+  document.getElementById("raceName").value = "";
   save();
-  render(leftovers);
+  render();
 }
 
-function render(leftovers=[]) {
-  const houseSelect = document.getElementById("horseHouseSelect");
-  houseSelect.innerHTML = "";
-  houses.forEach(h => {
-    const opt = document.createElement("option");
-    opt.value = h; opt.textContent = h;
-    houseSelect.appendChild(opt);
-  });
+// Add horse to a race
+function addHorseToRace(r, h) {
+  races[r].horses.push(horses[h]);
+  save();
+  render();
+}
 
+// Remove horse from a race
+function removeHorseFromRace(r, h) {
+  races[r].horses.splice(h, 1);
+  save();
+  render();
+}
+
+// Render all races and horses
+function render() {
   const racesDiv = document.getElementById("races");
   racesDiv.innerHTML = "";
-  if (races.length === 0) {
-    racesDiv.innerHTML = "<p>No races drawn yet.</p>";
-  }
 
   races.forEach((race, rIndex) => {
     const div = document.createElement("div");
     div.className = "race";
-    div.innerHTML = `<strong>Race ${rIndex + 1}</strong>`;
-    race.forEach((h, i) => {
-      div.innerHTML += `<div class="horse">${i + 1}. ${h.name} (House ${h.house})</div>`;
+    div.innerHTML = `<strong>${race.name}</strong>`;
+
+    // List horses in race
+    race.horses.forEach((h, hIndex) => {
+      div.innerHTML += `
+        <div class="horse">
+          ${h.name} (House ${h.house})
+          <button onclick="removeHorseFromRace(${rIndex}, ${hIndex})">
+            Remove
+          </button>
+        </div>`;
     });
+
+    // Dropdown to add horses to race
+    const select = document.createElement("select");
+    horses.forEach((h, i) => {
+      const o = document.createElement("option");
+      o.value = i;
+      o.textContent = `${h.name} (House ${h.house})`;
+      select.appendChild(o);
+    });
+
+    const btn = document.createElement("button");
+    btn.textContent = "Add Horse to Race";
+    btn.onclick = () => addHorseToRace(rIndex, select.value);
+
+    div.appendChild(select);
+    div.appendChild(btn);
     racesDiv.appendChild(div);
   });
-
-  const leftoversDiv = document.getElementById("leftovers");
-  leftoversDiv.innerHTML = "";
-  if (leftovers.length > 0) {
-    const div = document.createElement("div");
-    div.className = "leftovers";
-    div.innerHTML = "<strong>Leftover Horses:</strong>";
-    leftovers.forEach(h => {
-      div.innerHTML += `<div class="horse">${h.name} (House ${h.house})</div>`;
-    });
-    leftoversDiv.appendChild(div);
-  }
 }
 
+// Delete all data
+document.getElementById("deleteAllBtn").addEventListener("click", () => {
+  if (!confirm("Are you sure you want to delete ALL horses and races?")) return;
+
+  horses = [];
+  races = [];
+  localStorage.removeItem("horses");
+  localStorage.removeItem("races");
+  render();
+  alert("All data has been deleted!");
+});
+
+// Initial render
 render();
 </script>
+
 </body>
 </html>

@@ -17,7 +17,6 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 </head>
 <body>
 
-<!-- 🔒 LOCK SCREEN -->
 <div id="lockScreen" style="text-align:center; margin-top:120px;">
   <h2>🔒 Private Page</h2>
   <p>Enter Access Code</p>
@@ -26,9 +25,7 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
   <p id="error" style="color:red;"></p>
 </div>
 
-<!-- 🔓 APP CONTENT -->
 <div id="appContent" style="display:none;">
-
 <h1>🐎 Horse Draw Manager</h1>
 <button class="delete" onclick="deleteAll()">Delete All Data</button>
 
@@ -62,7 +59,15 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 <script>
 /* 🔑 ACCESS CODE */
 const SECRET_CODE = "HORSE2026";
+const lockScreen = document.getElementById("lockScreen");
+const appContent = document.getElementById("appContent");
+const accessCode = document.getElementById("accessCode");
+const error = document.getElementById("error");
+const racesDiv = document.getElementById("races");
+const drawResults = document.getElementById("drawResults");
+
 if (sessionStorage.getItem("accessGranted")) unlock(true);
+
 function unlock(auto=false){
   if(auto || accessCode.value === SECRET_CODE){
     lockScreen.style.display="none";
@@ -97,6 +102,7 @@ function save(){
 
 function updateHouses(){
   const hs=[...new Set(horses.map(h=>h.house))];
+  const houseSelect = document.getElementById("houseSelect");
   houseSelect.innerHTML="";
   hs.forEach(h=>{
     const o=document.createElement("option");
@@ -106,25 +112,27 @@ function updateHouses(){
 }
 
 function addHorses(){
-  let house=newHouse.value.trim()||houseSelect.value;
+  let house = document.getElementById("newHouse").value.trim() || document.getElementById("houseSelect").value;
   if(!house) return alert("House required");
-  horseNames.value.split("\n").forEach(n=>{
-    n=n.trim();
+  document.getElementById("horseNames").value.split("\n").forEach(n=>{
+    n = n.trim();
     if(n && !horses.find(h=>h.name===n)) horses.push({name:n,house});
   });
-  horseNames.value=""; newHouse.value="";
+  document.getElementById("horseNames").value="";
+  document.getElementById("newHouse").value="";
   save(); render();
 }
 
 function addRace(){
-  if(!raceName.value.trim()) return;
-  races.push({name:raceName.value,horses:[]});
-  raceName.value=""; save(); render();
+  let raceName = document.getElementById("raceName").value.trim();
+  if(!raceName) return alert("Race name required");
+  races.push({name: raceName, horses: []});
+  document.getElementById("raceName").value="";
+  save(); render();
 }
 
 function addToRace(r,i){
-  if(!races[r].horses.includes(horses[i]))
-    races[r].horses.push(horses[i]);
+  if(!races[r].horses.includes(horses[i])) races[r].horses.push(horses[i]);
   save(); render();
 }
 
@@ -140,19 +148,21 @@ function render(){
   races.forEach((r,ri)=>{
     const d=document.createElement("div");
     d.className="race";
-    d.innerHTML=`<strong>${r.name}</strong>`;
+    d.innerHTML=`<strong>${r.name}</strong><br>`;
     r.horses.forEach((h,hi)=>{
-      d.innerHTML+=`${h.name} (${h.house}) <button onclick="removeFromRace(${ri},${hi})">Remove</button><br>`;
+      d.innerHTML += `${h.name} (${h.house}) <button onclick="removeFromRace(${ri},${hi})">Remove</button><br>`;
     });
-    const sel=document.createElement("select");
+    const sel = document.createElement("select");
     horses.forEach((h,i)=>{
-      const o=document.createElement("option");
+      const o = document.createElement("option");
       o.value=i; o.textContent=`${h.name} (${h.house})`;
       sel.appendChild(o);
     });
-    const b=document.createElement("button");
-    b.textContent="Add Horse"; b.onclick=()=>addToRace(ri,sel.value);
-    d.appendChild(sel); d.appendChild(b);
+    const b = document.createElement("button");
+    b.textContent="Add Horse";
+    b.onclick=()=>addToRace(ri,sel.value);
+    d.appendChild(sel);
+    d.appendChild(b);
     racesDiv.appendChild(d);
   });
   updateHouses();
@@ -178,23 +188,5 @@ function generateAllDraws(){
     heats.forEach((h,i)=>{
       const d=document.createElement("div");
       d.className="race";
-      d.innerHTML=`<strong>${r.name} – Heat ${i+1}</strong>
-      <br>Horses racing (${h.length}):<ul>`;
-      h.forEach(x=>d.innerHTML+=`<li>${x.name} (${x.house})</li>`);
-      d.innerHTML+="</ul>";
-      drawResults.appendChild(d);
-    });
-  });
-}
-
-function deleteAll(){
-  if(!confirm("Delete everything?")) return;
-  localStorage.clear();
-  location.reload();
-}
-
-render();
-</script>
-
-</body>
-</html>
+      d.innerHTML=`<strong>${r.name} – Heat ${i+1}</strong><br>
+      Horses racing (${h.

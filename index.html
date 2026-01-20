@@ -9,7 +9,7 @@
     body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; }
     h1 { text-align: center; }
     .section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-    input, select, button { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+    input, select, button, textarea { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
     button { background: #2c3e50; color: white; border: none; cursor: pointer; }
     #deleteAllBtn { background: #e74c3c; color: white; margin-bottom: 20px; }
     .race { border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 5px; }
@@ -24,10 +24,11 @@
 <button id="deleteAllBtn">Delete All Data</button>
 
 <div class="section">
-  <h2>Add Horse</h2>
-  <input id="horseName" placeholder="Horse name">
-  <input id="horseHouse" placeholder="House">
-  <button onclick="addHorse()">Add Horse</button>
+  <h2>Add Horse(s)</h2>
+  <textarea id="horseNames" placeholder="Enter horse names, one per line"></textarea>
+  <select id="houseSelect"></select>
+  <input id="newHouse" placeholder="Or type new house name">
+  <button onclick="addHorses()">Add Horse(s)</button>
 </div>
 
 <div class="section">
@@ -58,17 +59,41 @@ function save() {
   localStorage.setItem("horses", JSON.stringify(horses));
   localStorage.setItem("races", JSON.stringify(races));
   localStorage.setItem("horseRaceCount", JSON.stringify(horseRaceCount));
+  updateHouseDropdown();
 }
 
-// Add horse
-function addHorse() {
-  const name = document.getElementById("horseName").value.trim();
-  const house = document.getElementById("horseHouse").value.trim();
-  if (!name || !house) return alert("Fill all fields");
-  horses.push({ name, house });
-  horseRaceCount[name] = 0; // initialize race count
-  document.getElementById("horseName").value = "";
-  document.getElementById("horseHouse").value = "";
+// Update the house dropdown based on existing houses
+function updateHouseDropdown() {
+  const houseSelect = document.getElementById("houseSelect");
+  houseSelect.innerHTML = "";
+  const houses = [...new Set(horses.map(h => h.house))];
+  houses.forEach(house => {
+    const option = document.createElement("option");
+    option.value = house;
+    option.textContent = house;
+    houseSelect.appendChild(option);
+  });
+}
+
+// Add one or multiple horses
+function addHorses() {
+  let house = document.getElementById("newHouse").value.trim();
+  if (!house) {
+    house = document.getElementById("houseSelect").value;
+  }
+  if (!house) return alert("Please select or enter a house");
+
+  const namesText = document.getElementById("horseNames").value.trim();
+  if (!namesText) return alert("Enter at least one horse name");
+
+  const names = namesText.split("\n").map(n => n.trim()).filter(n => n);
+  names.forEach(name => {
+    horses.push({ name, house });
+    horseRaceCount[name] = 0;
+  });
+
+  document.getElementById("horseNames").value = "";
+  document.getElementById("newHouse").value = "";
   save();
   render();
 }
@@ -86,14 +111,8 @@ function addRace() {
 // Add horse to race with rules
 function addHorseToRace(r, hIndex) {
   const horse = horses[hIndex];
-
-  // Check if horse is already in this race
   if (races[r].horses.includes(horse)) return alert("Horse already in this race");
-
-  // Check min/max races per horse
   if (horseRaceCount[horse.name] >= 3) return alert(`${horse.name} is already in 3 races`);
-
-  // Optional: check min 2 races after adding, but we'll enforce max 3 for now
   races[r].horses.push(horse);
   horseRaceCount[horse.name]++;
   save();
@@ -136,7 +155,6 @@ function render() {
     div.className = "race";
     div.innerHTML = `<strong>${race.name}</strong>`;
 
-    // Show horses in race
     race.horses.forEach((h, hIndex) => {
       div.innerHTML += `
         <div class="horse">
@@ -145,12 +163,12 @@ function render() {
         </div>`;
     });
 
-    // Dropdown: only show horses from the same house that can still join
+    // Dropdown: only horses from same house that are eligible
     const select = document.createElement("select");
     const horseOptions = horses.filter(h =>
       (!race.horses.includes(h)) && (horseRaceCount[h.name] < 3)
     );
-    horseOptions.forEach((h, i) => {
+    horseOptions.forEach(h => {
       const o = document.createElement("option");
       o.value = horses.indexOf(h);
       o.textContent = `${h.name} (House ${h.house})`;
@@ -171,6 +189,8 @@ function render() {
     div.appendChild(btnDraw);
     racesDiv.appendChild(div);
   });
+
+  updateHouseDropdown();
 }
 
 // Delete all data

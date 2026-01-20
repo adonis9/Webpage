@@ -49,13 +49,13 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 </div>
 
 <div class="section">
-<h2>Races</h2>
+<h2>Races (Assign Horses)</h2>
 <div id="races"></div>
 </div>
 
 <div class="section">
-<h2>🏁 Draw Results</h2>
-<button class="draw" onclick="generateDraw()">Generate Draw</button>
+<h2>🏁 Draw Results (All Races)</h2>
+<button class="draw" onclick="generateAllDraws()">Generate Draw for All Races</button>
 <div id="drawResults"></div>
 </div>
 
@@ -67,7 +67,7 @@ const SECRET_CODE = "HORSE2026";
 if (sessionStorage.getItem("accessGranted")) unlock(true);
 
 function unlock(auto=false){
-  if(auto || document.getElementById("accessCode").value === SECRET_CODE){
+  if(auto || accessCode.value === SECRET_CODE){
     lockScreen.style.display="none";
     appContent.style.display="block";
     sessionStorage.setItem("accessGranted","true");
@@ -89,123 +89,124 @@ const preload=[
 ];
 
 if(localStorage.getItem("horses")){
-horses=JSON.parse(localStorage.getItem("horses"));
-races=JSON.parse(localStorage.getItem("races"));
+  horses=JSON.parse(localStorage.getItem("horses"));
+  races=JSON.parse(localStorage.getItem("races"));
 }else{
-preload.forEach(h=>{
-h[1].forEach(n=>horses.push({name:n,house:h[0]}));
-});
+  preload.forEach(h=>{
+    h[1].forEach(n=>horses.push({name:n,house:h[0]}));
+  });
 }
 
 function save(){
-localStorage.setItem("horses",JSON.stringify(horses));
-localStorage.setItem("races",JSON.stringify(races));
-updateHouses();
+  localStorage.setItem("horses",JSON.stringify(horses));
+  localStorage.setItem("races",JSON.stringify(races));
+  updateHouses();
 }
 
 function updateHouses(){
-const hs=[...new Set(horses.map(h=>h.house))];
-houseSelect.innerHTML="";
-hs.forEach(h=>{
-const o=document.createElement("option");
-o.value=h;o.textContent=h;
-houseSelect.appendChild(o);
-});
+  const hs=[...new Set(horses.map(h=>h.house))];
+  houseSelect.innerHTML="";
+  hs.forEach(h=>{
+    const o=document.createElement("option");
+    o.value=h; o.textContent=h;
+    houseSelect.appendChild(o);
+  });
 }
 
 function addHorses(){
-let house=newHouse.value.trim()||houseSelect.value;
-if(!house)return alert("House required");
-horseNames.value.split("\n").forEach(n=>{
-n=n.trim();
-if(n && !horses.find(h=>h.name===n))
-horses.push({name:n,house});
-});
-horseNames.value="";
-newHouse.value="";
-save();render();
+  let house=newHouse.value.trim()||houseSelect.value;
+  if(!house)return alert("House required");
+  horseNames.value.split("\n").forEach(n=>{
+    n=n.trim();
+    if(n && !horses.find(h=>h.name===n))
+      horses.push({name:n,house});
+  });
+  horseNames.value=""; newHouse.value="";
+  save(); render();
 }
 
 function addRace(){
-if(!raceName.value.trim())return;
-races.push({name:raceName.value,horses:[]});
-raceName.value="";
-save();render();
+  if(!raceName.value.trim())return;
+  races.push({name:raceName.value,horses:[]});
+  raceName.value="";
+  save(); render();
 }
 
 function addToRace(r,i){
-races[r].horses.push(horses[i]);
-save();render();
+  if(!races[r].horses.includes(horses[i]))
+    races[r].horses.push(horses[i]);
+  save(); render();
 }
 
 function removeFromRace(r,i){
-races[r].horses.splice(i,1);
-save();render();
+  races[r].horses.splice(i,1);
+  save(); render();
 }
 
-function shuffle(a){return a.sort(()=>Math.random()-0.5);}
+function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
 
 function render(){
-racesDiv.innerHTML="";
-races.forEach((r,ri)=>{
-const d=document.createElement("div");
-d.className="race";
-d.innerHTML=`<strong>${r.name}</strong>`;
-r.horses.forEach((h,hi)=>{
-d.innerHTML+=`${h.name} (${h.house})
-<button onclick="removeFromRace(${ri},${hi})">Remove</button><br>`;
-});
-const sel=document.createElement("select");
-horses.forEach((h,i)=>{
-const o=document.createElement("option");
-o.value=i;o.textContent=`${h.name} (${h.house})`;
-sel.appendChild(o);
-});
-const b=document.createElement("button");
-b.textContent="Add Horse";
-b.onclick=()=>addToRace(ri,sel.value);
-d.appendChild(sel);d.appendChild(b);
-racesDiv.appendChild(d);
-});
-updateHouses();
+  racesDiv.innerHTML="";
+  races.forEach((r,ri)=>{
+    const d=document.createElement("div");
+    d.className="race";
+    d.innerHTML=`<strong>${r.name}</strong>`;
+    r.horses.forEach((h,hi)=>{
+      d.innerHTML+=`${h.name} (${h.house})
+      <button onclick="removeFromRace(${ri},${hi})">Remove</button><br>`;
+    });
+    const sel=document.createElement("select");
+    horses.forEach((h,i)=>{
+      const o=document.createElement("option");
+      o.value=i; o.textContent=`${h.name} (${h.house})`;
+      sel.appendChild(o);
+    });
+    const b=document.createElement("button");
+    b.textContent="Add Horse";
+    b.onclick=()=>addToRace(ri,sel.value);
+    d.appendChild(sel); d.appendChild(b);
+    racesDiv.appendChild(d);
+  });
+  updateHouses();
 }
 
-/* 🏁 DRAW LOGIC */
-function generateDraw(){
-drawResults.innerHTML="";
-races.forEach(r=>{
-if(r.horses.length<2)return;
+/* 🏁 AUTO DRAW FOR ALL RACES */
+function generateAllDraws(){
+  drawResults.innerHTML="";
 
-let shuffled=shuffle([...r.horses]);
-let groups=[];
+  races.forEach(r=>{
+    if(r.horses.length < 2) return;
 
-while(shuffled.length){
-if(shuffled.length===4){
-groups.push(shuffled.splice(0,2));
-groups.push(shuffled.splice(0,2));
-}else if(shuffled.length===2 || shuffled.length===3){
-groups.push(shuffled.splice(0));
-}else{
-groups.push(shuffled.splice(0,3));
-}
-}
+    let shuffled = shuffle([...r.horses]);
+    let heats = [];
 
-groups.forEach((g,i)=>{
-const d=document.createElement("div");
-d.className="race";
-d.innerHTML=`<strong>${r.name} – Heat ${i+1}</strong><br>
-Horses racing (${g.length}):<ul>`;
-g.forEach(h=>d.innerHTML+=`<li>${h.name} (${h.house})</li>`);
-d.innerHTML+="</ul>";
-drawResults.appendChild(d);
-});
-});
+    while(shuffled.length){
+      if(shuffled.length === 4){
+        heats.push(shuffled.splice(0,2));
+        heats.push(shuffled.splice(0,2));
+      } else if (shuffled.length === 2 || shuffled.length === 3){
+        heats.push(shuffled.splice(0));
+      } else {
+        heats.push(shuffled.splice(0,3));
+      }
+    }
+
+    heats.forEach((h,i)=>{
+      const d=document.createElement("div");
+      d.className="race";
+      d.innerHTML=`<strong>${r.name} – Heat ${i+1}</strong>
+      <br>Horses racing (${h.length}):<ul>`;
+      h.forEach(x=>d.innerHTML+=`<li>${x.name} (${x.house})</li>`);
+      d.innerHTML+="</ul>";
+      drawResults.appendChild(d);
+    });
+  });
 }
 
 function deleteAll(){
-if(!confirm("Delete everything?"))return;
-localStorage.clear();
-location.reload();
+  if(!confirm("Delete everything?"))return;
+  localStorage.clear();
+  location.reload();
 }
 
 render();

@@ -61,8 +61,15 @@
 </div>
 
 <script>
-let horses = JSON.parse(localStorage.getItem("horses")) || [];
-let races = JSON.parse(localStorage.getItem("races")) || [];
+let horses = [];
+let races = [];
+
+try {
+  horses = JSON.parse(localStorage.getItem("horses")) || [];
+  races = JSON.parse(localStorage.getItem("races")) || [];
+} catch (e) {
+  console.warn("LocalStorage unavailable, starting fresh");
+}
 
 function save() {
   localStorage.setItem("horses", JSON.stringify(horses));
@@ -70,12 +77,12 @@ function save() {
 }
 
 function addHorse() {
-  if (!horseName.value || !horseHouse.value) return alert("Fill all fields");
-  horses.push({ name: horseName.value, house: horseHouse.value });
-  horseName.value = "";
-  horseHouse.value = "";
+ function addHorseToRace(r, h) {
+  if (races[r].horses.some(x => x.name === horses[h].name)) return;
+  races[r].horses.push(horses[h]);
   save();
   render();
+}
 }
 
 function addRace() {

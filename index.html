@@ -37,3 +37,118 @@
       border-radius: 5px;
     }
     .horse { padding: 5px; }
+  </style>
+</head>
+
+<body>
+
+<h1>🐎 Horse Draw Manager</h1>
+
+<div class="section">
+  <h2>Add Horse</h2>
+  <input id="horseName" placeholder="Horse name">
+  <input id="horseHouse" placeholder="House">
+  <button onclick="addHorse()">Add Horse</button>
+</div>
+
+<div class="section">
+  <h2>Create Race</h2>
+  <input id="raceName" placeholder="Race name">
+  <button onclick="addRace()">Add Race</button>
+</div>
+
+<div class="section">
+  <h2>Races</h2>
+  <div id="races"></div>
+</div>
+
+<script>
+let horses = [];
+let races = [];
+
+try {
+  horses = JSON.parse(localStorage.getItem("horses")) || [];
+  races = JSON.parse(localStorage.getItem("races")) || [];
+} catch (e) {
+  console.warn("LocalStorage unavailable — starting fresh");
+}
+
+function save() {
+  localStorage.setItem("horses", JSON.stringify(horses));
+  localStorage.setItem("races", JSON.stringify(races));
+}
+
+function addHorse() {
+  const name = document.getElementById("horseName").value.trim();
+  const house = document.getElementById("horseHouse").value.trim();
+  if (!name || !house) return alert("Fill all fields");
+  horses.push({ name, house });
+  document.getElementById("horseName").value = "";
+  document.getElementById("horseHouse").value = "";
+  save();
+  render();
+}
+
+function addRace() {
+  const name = document.getElementById("raceName").value.trim();
+  if (!name) return alert("Enter a race name");
+  races.push({ name, horses: [] });
+  document.getElementById("raceName").value = "";
+  save();
+  render();
+}
+
+function addHorseToRace(r, h) {
+  races[r].horses.push(horses[h]);
+  save();
+  render();
+}
+
+function removeHorseFromRace(r, h) {
+  races[r].horses.splice(h, 1);
+  save();
+  render();
+}
+
+function render() {
+  const racesDiv = document.getElementById("races");
+  racesDiv.innerHTML = "";
+
+  races.forEach((race, rIndex) => {
+    const div = document.createElement("div");
+    div.className = "race";
+    div.innerHTML = `<strong>${race.name}</strong>`;
+
+    race.horses.forEach((h, hIndex) => {
+      div.innerHTML += `
+        <div class="horse">
+          ${h.name} (House ${h.house})
+          <button onclick="removeHorseFromRace(${rIndex}, ${hIndex})">
+            Remove
+          </button>
+        </div>`;
+    });
+
+    const select = document.createElement("select");
+    horses.forEach((h, i) => {
+      const o = document.createElement("option");
+      o.value = i;
+      o.textContent = `${h.name} (House ${h.house})`;
+      select.appendChild(o);
+    });
+
+    const btn = document.createElement("button");
+    btn.textContent = "Add Horse to Race";
+    btn.onclick = () => addHorseToRace(rIndex, select.value);
+
+    div.appendChild(select);
+    div.appendChild(btn);
+    racesDiv.appendChild(div);
+  });
+}
+
+render();
+</script>
+
+</body>
+</html>

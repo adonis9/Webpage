@@ -1,65 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Horse Draw Manager</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 { text-align: center; }
-    .section {
-      background: white;
-      padding: 15px;
-      margin-bottom: 20px;
-      border-radius: 8px;
-    }
-    input, select, button {
-      padding: 8px;
-      margin: 5px 0;
-      width: 100%;
-    }
-    button {
-      background: #2c3e50;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    .race {
-      border: 1px solid #ddd;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 5px;
-    }
-    .horse { padding: 5px; }
-  </style>
-</head>
-<body>
-
-<h1>🐎 Horse Draw Manager</h1>
-
-<div class="section">
-  <h2>Add Horse</h2>
-  <input id="horseName" placeholder="Horse name">
-  <input id="horseHouse" placeholder="House">
-  <button onclick="addHorse()">Add Horse</button>
-</div>
-
-<div class="section">
-  <h2>Create Race</h2>
-  <input id="raceName" placeholder="Race name">
-  <button onclick="addRace()">Add Race</button>
-</div>
-
-<div class="section">
-  <h2>Races</h2>
-  <div id="races"></div>
-</div>
-
 <script>
 let horses = [];
 let races = [];
@@ -68,38 +6,46 @@ try {
   horses = JSON.parse(localStorage.getItem("horses")) || [];
   races = JSON.parse(localStorage.getItem("races")) || [];
 } catch (e) {
-  console.warn("LocalStorage unavailable, starting fresh");
+  console.warn("LocalStorage unavailable or corrupted — starting fresh");
+  horses = [];
+  races = [];
 }
 
 function save() {
-  localStorage.setItem("horses", JSON.stringify(horses));
-  localStorage.setItem("races", JSON.stringify(races));
+  try {
+    localStorage.setItem("horses", JSON.stringify(horses));
+    localStorage.setItem("races", JSON.stringify(races));
+  } catch (e) {
+    console.warn("Could not save to localStorage");
+  }
 }
 
 function addHorse() {
- function addHorseToRace(r, h) {
-  if (races[r].horses.some(x => x.name === horses[h].name)) return;
-  races[r].horses.push(horses[h]);
+  const name = document.getElementById("horseName").value.trim();
+  const house = document.getElementById("horseHouse").value.trim();
+  if (!name || !house) return alert("Fill all fields");
+  horses.push({ name, house });
   save();
   render();
 }
-}
 
 function addRace() {
-  if (!raceName.value) return;
-  races.push({ name: raceName.value, horses: [] });
-  raceName.value = "";
+  const name = document.getElementById("raceName").value.trim();
+  if (!name) return alert("Enter a race name");
+  races.push({ name, horses: [] });
   save();
   render();
 }
 
 function addHorseToRace(r, h) {
+  if (!races[r] || !horses[h]) return;
   races[r].horses.push(horses[h]);
   save();
   render();
 }
 
 function removeHorseFromRace(r, h) {
+  if (!races[r] || !races[r].horses[h]) return;
   races[r].horses.splice(h, 1);
   save();
   render();
@@ -109,9 +55,10 @@ function render() {
   const racesDiv = document.getElementById("races");
   racesDiv.innerHTML = "";
   races.forEach((race, rIndex) => {
-    let div = document.createElement("div");
+    const div = document.createElement("div");
     div.className = "race";
     div.innerHTML = `<strong>${race.name}</strong>`;
+
     race.horses.forEach((h, hIndex) => {
       div.innerHTML += `<div class="horse">
         ${h.name} (House ${h.house})
@@ -119,15 +66,15 @@ function render() {
       </div>`;
     });
 
-    let select = document.createElement("select");
+    const select = document.createElement("select");
     horses.forEach((h, i) => {
-      let o = document.createElement("option");
+      const o = document.createElement("option");
       o.value = i;
       o.textContent = `${h.name} (House ${h.house})`;
       select.appendChild(o);
     });
 
-    let btn = document.createElement("button");
+    const btn = document.createElement("button");
     btn.textContent = "Add Horse to Race";
     btn.onclick = () => addHorseToRace(rIndex, select.value);
 
@@ -137,8 +84,5 @@ function render() {
   });
 }
 
-render();
+window.addEventListener("DOMContentLoaded", render);
 </script>
-
-</body>
-</html>

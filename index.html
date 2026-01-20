@@ -19,6 +19,18 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 
 <body>
 
+<!-- 🔒 LOCK SCREEN -->
+<div id="lockScreen" style="text-align:center; margin-top:120px;">
+  <h2>🔒 Private Page</h2>
+  <p>Enter Access Code</p>
+  <input type="password" id="accessCode" placeholder="Access code">
+  <button onclick="unlock()">Enter</button>
+  <p id="error" style="color:red;"></p>
+</div>
+
+<!-- 🔓 APP CONTENT -->
+<div id="appContent" style="display:none;">
+
 <h1>🐎 Horse Draw Manager</h1>
 <button class="delete" onclick="deleteAll()">Delete All Data</button>
 
@@ -53,7 +65,25 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 <div id="finalResults"></div>
 </div>
 
+</div>
+
 <script>
+/* 🔑 ACCESS CODE */
+const SECRET_CODE = "HORSE2026"; // CHANGE THIS
+
+if (sessionStorage.getItem("accessGranted")) unlock(true);
+
+function unlock(auto=false){
+  if(auto || document.getElementById("accessCode").value === SECRET_CODE){
+    document.getElementById("lockScreen").style.display="none";
+    document.getElementById("appContent").style.display="block";
+    sessionStorage.setItem("accessGranted","true");
+  } else {
+    document.getElementById("error").textContent="Incorrect access code";
+  }
+}
+
+/* 🐎 APP LOGIC */
 let horses=[], races=[], raceCount={}, raceResults=[];
 
 const preload=[

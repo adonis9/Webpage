@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Horse Draw Manager</title>
-
 <style>
 body { font-family: Arial, sans-serif; background:#f4f6f8; padding:20px; }
 h1 { text-align:center; }
@@ -16,7 +15,6 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 .race { border:1px solid #ddd; padding:10px; margin-top:10px; border-radius:5px; }
 </style>
 </head>
-
 <body>
 
 <!-- 🔒 LOCK SCREEN -->
@@ -65,20 +63,16 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 /* 🔑 ACCESS CODE */
 const SECRET_CODE = "HORSE2026";
 if (sessionStorage.getItem("accessGranted")) unlock(true);
-
 function unlock(auto=false){
   if(auto || accessCode.value === SECRET_CODE){
     lockScreen.style.display="none";
     appContent.style.display="block";
     sessionStorage.setItem("accessGranted","true");
-  } else {
-    error.textContent="Incorrect access code";
-  }
+  } else { error.textContent="Incorrect access code"; }
 }
 
 /* 🐎 DATA */
 let horses=[], races=[];
-
 const preload=[
 ["Koxera Monte Barro",["Sabe Na Mundo","Arbisa","Pisadelo","Fradu Fra"]],
 ["Koxera Nene Lapinha",["Forca Imigrante","America Dreams","Bless"]],
@@ -92,9 +86,7 @@ if(localStorage.getItem("horses")){
   horses=JSON.parse(localStorage.getItem("horses"));
   races=JSON.parse(localStorage.getItem("races"));
 }else{
-  preload.forEach(h=>{
-    h[1].forEach(n=>horses.push({name:n,house:h[0]}));
-  });
+  preload.forEach(h=>h[1].forEach(n=>horses.push({name:n,house:h[0]})));
 }
 
 function save(){
@@ -115,21 +107,19 @@ function updateHouses(){
 
 function addHorses(){
   let house=newHouse.value.trim()||houseSelect.value;
-  if(!house)return alert("House required");
+  if(!house) return alert("House required");
   horseNames.value.split("\n").forEach(n=>{
     n=n.trim();
-    if(n && !horses.find(h=>h.name===n))
-      horses.push({name:n,house});
+    if(n && !horses.find(h=>h.name===n)) horses.push({name:n,house});
   });
   horseNames.value=""; newHouse.value="";
   save(); render();
 }
 
 function addRace(){
-  if(!raceName.value.trim())return;
+  if(!raceName.value.trim()) return;
   races.push({name:raceName.value,horses:[]});
-  raceName.value="";
-  save(); render();
+  raceName.value=""; save(); render();
 }
 
 function addToRace(r,i){
@@ -152,8 +142,7 @@ function render(){
     d.className="race";
     d.innerHTML=`<strong>${r.name}</strong>`;
     r.horses.forEach((h,hi)=>{
-      d.innerHTML+=`${h.name} (${h.house})
-      <button onclick="removeFromRace(${ri},${hi})">Remove</button><br>`;
+      d.innerHTML+=`${h.name} (${h.house}) <button onclick="removeFromRace(${ri},${hi})">Remove</button><br>`;
     });
     const sel=document.createElement("select");
     horses.forEach((h,i)=>{
@@ -162,35 +151,30 @@ function render(){
       sel.appendChild(o);
     });
     const b=document.createElement("button");
-    b.textContent="Add Horse";
-    b.onclick=()=>addToRace(ri,sel.value);
+    b.textContent="Add Horse"; b.onclick=()=>addToRace(ri,sel.value);
     d.appendChild(sel); d.appendChild(b);
     racesDiv.appendChild(d);
   });
   updateHouses();
 }
 
-/* 🏁 AUTO DRAW FOR ALL RACES */
+/* 🏁 DRAW LOGIC FOR ALL RACES */
 function generateAllDraws(){
   drawResults.innerHTML="";
-
   races.forEach(r=>{
-    if(r.horses.length < 2) return;
-
+    if(r.horses.length<2) return;
     let shuffled = shuffle([...r.horses]);
     let heats = [];
-
     while(shuffled.length){
       if(shuffled.length === 4){
         heats.push(shuffled.splice(0,2));
         heats.push(shuffled.splice(0,2));
-      } else if (shuffled.length === 2 || shuffled.length === 3){
+      } else if(shuffled.length === 2 || shuffled.length === 3){
         heats.push(shuffled.splice(0));
       } else {
         heats.push(shuffled.splice(0,3));
       }
     }
-
     heats.forEach((h,i)=>{
       const d=document.createElement("div");
       d.className="race";
@@ -204,7 +188,7 @@ function generateAllDraws(){
 }
 
 function deleteAll(){
-  if(!confirm("Delete everything?"))return;
+  if(!confirm("Delete everything?")) return;
   localStorage.clear();
   location.reload();
 }

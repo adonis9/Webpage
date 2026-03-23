@@ -53,8 +53,25 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 
 <script>
 const SECRET_CODE = "HORSE2026";
-
-let horses = [];
+let horses = [
+  {name:"Sabe Na Mundo", house:"Koxera Monte Barro"},
+  {name:"Arbisa", house:"Koxera Monte Barro"},
+  {name:"Pisadelo", house:"Koxera Monte Barro"},
+  {name:"Fradu Fra", house:"Koxera Monte Barro"},
+  {name:"Forca Imigrante", house:"Koxera Nene Lapinha"},
+  {name:"America Dreams", house:"Koxera Nene Lapinha"},
+  {name:"Bless", house:"Koxera Nene Lapinha"},
+  {name:"Miss Fogo", house:"Koxera Lele"},
+  {name:"Rainha Das Ilhas", house:"Clube Juvenil"},
+  {name:"Mestre Moita", house:"Koxera de Neto"},
+  {name:"Showtime", house:"Koxera de Neto"},
+  {name:"Santiago Sweetie", house:"EECV"},
+  {name:"Djabraba BAYC", house:"EECV"},
+  {name:"Eytiana", house:"EECV"},
+  {name:"Comandate", house:"EECV"},
+  {name:"Cidade velha", house:"EECV"},
+  {name:"Stylish", house:"EECV"}
+];
 
 function unlock(){
   if(document.getElementById("accessCode").value === SECRET_CODE){
@@ -71,7 +88,8 @@ function save(){
 }
 
 function load(){
-  horses = JSON.parse(localStorage.getItem("horses")) || [];
+  let saved = JSON.parse(localStorage.getItem("horses"));
+  if(saved && saved.length>0) horses = saved;
   updateHouses();
   renderHorseList();
 }
@@ -122,7 +140,7 @@ function shuffle(arr){
   return arr.sort(()=>Math.random()-0.5);
 }
 
-// ✅ FINAL LOGIC
+// Improved Draw Logic for 2-3 horses per race, all included, no same-house clashes
 function generateAutoDraw(){
   const out = document.getElementById("drawResults");
   out.innerHTML="";
@@ -131,42 +149,33 @@ function generateAutoDraw(){
 
   let houseMap = {};
   horses.forEach(h=>{
-    if(!houseMap[h.house]) houseMap[h.house]=[];
+    if(!houseMap[h.house]) houseMap[h.house] = [];
     houseMap[h.house].push(h);
   });
 
   let houses = Object.keys(houseMap);
+  houses.forEach(h => houseMap[h] = shuffle(houseMap[h]));
 
-  // warning check
-  let maxHouse = Math.max(...Object.values(houseMap).map(h=>h.length));
-  let others = horses.length - maxHouse;
-
-  if(maxHouse > others + 1){
-    out.innerHTML += "<p style='color:red'>⚠️ Not enough variety to avoid same-house races</p>";
-  }
-
-  houses.forEach(h => houseMap[h]=shuffle(houseMap[h]));
-
-  let heats=[];
-
+  let heats = [];
   while(true){
-    let available = houses.filter(h=>houseMap[h].length>0);
-    if(available.length===0) break;
+    let available = houses.filter(h => houseMap[h].length > 0);
+    if(available.length === 0) break;
 
     let remaining = Object.values(houseMap).reduce((a,b)=>a+b.length,0);
-
-    let size;
-    if(remaining<=3) size=remaining;
-    else if(remaining===4) size=2;
-    else size=3;
-
+    let size = (remaining <=3) ? remaining : (remaining===4 ? 2 : 3);
     size = Math.min(size, available.length);
-    if(size<2) break;
+    if(size < 2) break;
 
-    let chosen = shuffle([...available]).slice(0,size);
-    let heat = chosen.map(h=>houseMap[h].pop());
-
+    let chosen = shuffle([...available]).slice(0, size);
+    let heat = chosen.map(h => houseMap[h].pop());
     heats.push(heat);
+  }
+
+  let leftover = Object.values(houseMap).flat();
+  if(leftover.length === 1 && heats.length){
+    let lastHeat = heats.find(h => h.length === 2);
+    if(lastHeat) lastHeat.push(leftover[0]);
+    else heats[heats.length-1].push(leftover[0]);
   }
 
   heats.forEach((h,i)=>{

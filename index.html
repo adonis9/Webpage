@@ -26,7 +26,6 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 </div>
 
 <div id="appContent" style="display:none;">
-
 <h1>🐎 Horse Draw Manager</h1>
 <button class="delete" onclick="deleteAll()">Delete All Data</button>
 
@@ -48,7 +47,6 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 <button class="draw" onclick="generateAutoDraw()">Generate Draw</button>
 <div id="drawResults"></div>
 </div>
-
 </div>
 
 <script>
@@ -83,9 +81,7 @@ function unlock(){
   }
 }
 
-function save(){
-  localStorage.setItem("horses", JSON.stringify(horses));
-}
+function save(){ localStorage.setItem("horses", JSON.stringify(horses)); }
 
 function load(){
   let saved = JSON.parse(localStorage.getItem("horses"));
@@ -109,87 +105,65 @@ function updateHouses(){
 function addHorses(){
   let house = document.getElementById("newHouse").value.trim() || document.getElementById("houseSelect").value;
   if(!house) return alert("Enter house");
-
   document.getElementById("horseNames").value.split("\n").forEach(n=>{
     n=n.trim();
     if(n) horses.push({name:n, house});
   });
-
   document.getElementById("horseNames").value="";
   document.getElementById("newHouse").value="";
-  save();
-  updateHouses();
-  renderHorseList();
+  save(); updateHouses(); renderHorseList();
 }
 
-function removeHorse(i){
-  horses.splice(i,1);
-  save();
-  renderHorseList();
-}
+function removeHorse(i){ horses.splice(i,1); save(); renderHorseList(); }
 
 function renderHorseList(){
   const div = document.getElementById("horseList");
   div.innerHTML="";
-  horses.forEach((h,i)=>{
-    div.innerHTML += `${h.name} (${h.house}) <button onclick="removeHorse(${i})">X</button><br>`;
-  });
+  horses.forEach((h,i)=>{ div.innerHTML += `${h.name} (${h.house}) <button onclick="removeHorse(${i})">X</button><br>`; });
 }
 
-function shuffle(arr){
-  return arr.sort(()=>Math.random()-0.5);
-}
-// Improved Draw Logic for 2-3 horses per race, all included, no same-house clashes
+function shuffle(arr){ return arr.sort(()=>Math.random()-0.5); }
+
+// ✅ Fully Fixed Draw Logic
 function generateAutoDraw(){
   const out = document.getElementById("drawResults");
   out.innerHTML="";
+  if(horses.length<2) return;
 
-  if(horses.length < 2) return;
-
-  let houseMap = {};
-  horses.forEach(h=>{
-    if(!houseMap[h.house]) houseMap[h.house] = [];
-    houseMap[h.house].push(h);
-  });
-
-  let houses = Object.keys(houseMap);
-  houses.forEach(h => houseMap[h] = shuffle(houseMap[h]));
-
+  let unassigned = shuffle([...horses]);
   let heats = [];
-  while(true){
-    let available = houses.filter(h => houseMap[h].length > 0);
-    if(available.length === 0) break;
 
-    let remaining = Object.values(houseMap).reduce((a,b)=>a+b.length,0);
-    let size = (remaining <=3) ? remaining : (remaining===4 ? 2 : 3);
-    size = Math.min(size, available.length);
-    if(size < 2) break;
+  while(unassigned.length>0){
+    let heat = [];
+    let housesInHeat = new Set();
 
-    let chosen = shuffle([...available]).slice(0, size);
-    let heat = chosen.map(h => houseMap[h].pop());
-    heats.push(heat);
-  }
-
-  let leftover = Object.values(houseMap).flat();
-  if(leftover.length === 1 && heats.length){
-    let lastHeat = heats.find(h => h.length === 2);
-    if(lastHeat) lastHeat.push(leftover[0]);
-    else heats[heats.length-1].push(leftover[0]);
+    for(let i=0; i<unassigned.length && heat.length<3; i++){
+      if(!housesInHeat.has(unassigned[i].house) || heat.length===2){
+        heat.push(unassigned[i]);
+        housesInHeat.add(unassigned[i].house);
+      }
+    }
+    // remove assigned horses
+    heat.forEach(h=>{
+      let index = unassigned.indexOf(h);
+      if(index>-1) unassigned.splice(index,1);
+    });
+    // if heat has only 1 horse left, merge with previous heat
+    if(heat.length===1 && heats.length>0){
+      heats[heats.length-1].push(heat[0]);
+    } else {
+      heats.push(heat);
+    }
   }
 
   heats.forEach((h,i)=>{
     out.innerHTML += `<div class="race"><b>Race ${i+1}</b><ul>`;
-    h.forEach(x=>{
-      out.innerHTML += `<li>${x.name} (${x.house})</li>`;
-    });
+    h.forEach(x=>{ out.innerHTML += `<li>${x.name} (${x.house})</li>`; });
     out.innerHTML += "</ul></div>";
   });
 }
 
-function deleteAll(){
-  localStorage.clear();
-  location.reload();
-}
+function deleteAll(){ localStorage.clear(); location.reload(); }
 </script>
 
 </body>

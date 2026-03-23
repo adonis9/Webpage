@@ -18,23 +18,20 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 </head>
 <body>
 
-<!-- LOCK SCREEN -->
 <div id="lockScreen" style="text-align:center; margin-top:120px;">
   <h2>🔒 Private Page</h2>
-  <p>Enter Access Code</p>
   <input type="password" id="accessCode" placeholder="Access code">
   <button onclick="unlock()">Enter</button>
   <p id="error" style="color:red;"></p>
 </div>
 
-<!-- APP CONTENT -->
 <div id="appContent" style="display:none;">
 
-<h1>🐎 Horse Draw Manager - Fixed Heats</h1>
+<h1>🐎 Horse Draw Manager</h1>
 <button class="delete" onclick="deleteAll()">Delete All Data</button>
 
 <div class="section">
-<h2>Add / Edit Horses</h2>
+<h2>Add Horses</h2>
 <textarea id="horseNames" placeholder="One horse per line"></textarea>
 <select id="houseSelect"></select>
 <input id="newHouse" placeholder="Or new house name">
@@ -42,226 +39,149 @@ button { background:#2c3e50; color:white; border:none; cursor:pointer; }
 </div>
 
 <div class="section">
-<h2>Horses List (Remove if Not Participating)</h2>
+<h2>Horse List</h2>
 <div id="horseList"></div>
 </div>
 
 <div class="section">
-<h2>Manual Race Creation</h2>
-<input id="raceName" placeholder="Race name">
-<button onclick="addRace()">Add Race</button>
-<div id="races"></div>
-</div>
-
-<div class="section">
-<h2>🏁 Automatic Draw Results</h2>
-<button class="draw" onclick="generateAutoDraw()">Regenerate Draw</button>
+<h2>🏁 Draw Results</h2>
+<button class="draw" onclick="generateAutoDraw()">Generate Draw</button>
 <div id="drawResults"></div>
 </div>
 
 </div>
 
 <script>
-window.onload = function() {
-  const lockScreen = document.getElementById("lockScreen");
-  const appContent = document.getElementById("appContent");
-  const accessCode = document.getElementById("accessCode");
-  const error = document.getElementById("error");
-  const drawResults = document.getElementById("drawResults");
-  const horseListDiv = document.getElementById("horseList");
-  const racesDiv = document.getElementById("races");
+const SECRET_CODE = "HORSE2026";
 
-  const SECRET_CODE = "HORSE2026";
-  if (sessionStorage.getItem("accessGranted")) unlock(true);
+let horses = [];
 
-  function unlock(auto=false){
-    if(auto || accessCode.value === SECRET_CODE){
-      lockScreen.style.display="none";
-      appContent.style.display="block";
-      sessionStorage.setItem("accessGranted","true");
-    } else { error.textContent="Incorrect access code"; }
-  }
-  window.unlock = unlock;
-
-  let horses = [];
-  let races = [];
-  const preload=[
-    ["Koxera Monte Barro",["Sabe Na Mundo","Arbisa","Pisadelo","Fradu Fra"]],
-    ["Koxera Nene Lapinha",["Forca Imigrante","America Dreams","Bless"]],
-    ["Koxera Lele",["Miss Fogo"]],
-    ["Clube Juvenil",["Rainha Das Ilhas"]],
-    ["Koxera de Neto",["Mestre Moita","Showtime"]],
-    ["EECV",["Santiago Sweetie","Djabraba BAYC","Eytiana","Comandate","Cidade velha","stylish"]]
-  ];
-
-  if(localStorage.getItem("horses")){
-    horses = JSON.parse(localStorage.getItem("horses"));
-    races = JSON.parse(localStorage.getItem("races")) || [];
+function unlock(){
+  if(document.getElementById("accessCode").value === SECRET_CODE){
+    document.getElementById("lockScreen").style.display="none";
+    document.getElementById("appContent").style.display="block";
+    load();
   } else {
-    preload.forEach(h => h[1].forEach(n => horses.push({name:n,house:h[0]})));
+    document.getElementById("error").innerText="Wrong code";
   }
+}
 
-  function save(){
-    localStorage.setItem("horses",JSON.stringify(horses));
-    localStorage.setItem("races",JSON.stringify(races));
-    updateHouses();
-    renderHorseList();
-    renderRaces();
-    generateAutoDraw();
-  }
+function save(){
+  localStorage.setItem("horses", JSON.stringify(horses));
+}
 
-  function updateHouses(){
-    const hs=[...new Set(horses.map(h=>h.house))];
-    const houseSelect = document.getElementById("houseSelect");
-    houseSelect.innerHTML="";
-    hs.forEach(h=>{
-      const o=document.createElement("option");
-      o.value=h; o.textContent=h;
-      houseSelect.appendChild(o);
-    });
-  }
-
-  function addHorses(){
-    let house = document.getElementById("newHouse").value.trim() || document.getElementById("houseSelect").value;
-    if(!house) return alert("House required");
-    document.getElementById("horseNames").value.split("\n").forEach(n=>{
-      n = n.trim();
-      if(n && !horses.find(h=>h.name===n)) horses.push({name:n,house});
-    });
-    document.getElementById("horseNames").value="";
-    document.getElementById("newHouse").value="";
-    save();
-  }
-
-  function removeHorse(index){
-    if(!confirm("Remove this horse from draw?")) return;
-    horses.splice(index,1);
-    save();
-  }
-
-  function renderHorseList(){
-    horseListDiv.innerHTML="";
-    horses.forEach((h,i)=>{
-      const div = document.createElement("div");
-      div.className="horse-item";
-      div.innerHTML=`<span>${h.name} (${h.house})</span> 
-      <button onclick="removeHorse(${i})">Remove</button>`;
-      horseListDiv.appendChild(div);
-    });
-  }
-
-  function addRace(){
-    let raceName = document.getElementById("raceName").value.trim();
-    if(!raceName) return alert("Race name required");
-    races.push({name: raceName, horses: []});
-    document.getElementById("raceName").value="";
-    save();
-  }
-
-  function addToRace(raceIndex, horseIndex){
-    const h = horses[horseIndex];
-    if(!races[raceIndex].horses.includes(h)) races[raceIndex].horses.push(h);
-    save();
-  }
-
-  function removeFromRace(rIndex,hIndex){
-    races[rIndex].horses.splice(hIndex,1);
-    save();
-  }
-
-  function renderRaces(){
-    racesDiv.innerHTML="";
-    races.forEach((r,ri)=>{
-      const div = document.createElement("div");
-      div.className="race";
-      div.innerHTML=`<strong>${r.name}</strong><br>`;
-      r.horses.forEach((h,hi)=>{
-        div.innerHTML+=`${h.name} (${h.house}) <button onclick="removeFromRace(${ri},${hi})">Remove</button><br>`;
-      });
-      const sel = document.createElement("select");
-      horses.forEach((h,i)=>{
-        const o = document.createElement("option");
-        o.value=i; o.textContent=`${h.name} (${h.house})`;
-        sel.appendChild(o);
-      });
-      const b = document.createElement("button");
-      b.textContent="Add Horse";
-      b.onclick=()=>addToRace(ri,sel.value);
-      div.appendChild(sel);
-      div.appendChild(b);
-      racesDiv.appendChild(div);
-    });
-  }
-
-  function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
-
-  // --- FIXED DRAW LOGIC: Only 2-3 horses per heat ---
-  function generateAutoDraw(){
-    drawResults.innerHTML="";
-    if(horses.length<2) return;
-
-    let shuffled = shuffle([...horses]);
-    let heats = [];
-
-    while(shuffled.length){
-        let heatSize;
-        if(shuffled.length === 4) heatSize = 2; // split 4 into 2+2
-        else if(shuffled.length === 2 || shuffled.length === 3) heatSize = shuffled.length;
-        else heatSize = Math.min(3, shuffled.length);
-
-        let heat = [];
-        let housesInHeat = new Set();
-        let i = 0;
-
-        while(heat.length < heatSize && i < shuffled.length){
-            let h = shuffled[i];
-            let houseCount = shuffled.filter(x=>x.house===h.house).length;
-            let allowSameHouse = houseCount > 5;
-
-            if(!housesInHeat.has(h.house) || allowSameHouse){
-                heat.push(h);
-                housesInHeat.add(h.house);
-                shuffled.splice(i,1);
-            } else i++;
-        }
-
-        while(heat.length < heatSize && shuffled.length){
-            heat.push(shuffled.shift());
-        }
-
-        heats.push(heat);
-    }
-
-    // Display heats
-    heats.forEach((h,i)=>{
-        const d = document.createElement("div");
-        d.className = "race";
-        d.innerHTML = `<strong>Heat ${i+1}</strong><br>Horses racing (${h.length}):<ul>`;
-        h.forEach(x => d.innerHTML += `<li>${x.name} (${x.house})</li>`);
-        d.innerHTML += "</ul>";
-        drawResults.appendChild(d);
-    });
-  }
-
-  function deleteAll(){
-    if(!confirm("Delete everything?")) return;
-    localStorage.clear();
-    location.reload();
-  }
-
-  window.addHorses = addHorses;
-  window.removeHorse = removeHorse;
-  window.addRace = addRace;
-  window.addToRace = addToRace;
-  window.removeFromRace = removeFromRace;
-  window.generateAutoDraw = generateAutoDraw;
-  window.deleteAll = deleteAll;
-
+function load(){
+  horses = JSON.parse(localStorage.getItem("horses")) || [];
   updateHouses();
   renderHorseList();
-  renderRaces();
-  generateAutoDraw();
-};
+}
+
+function updateHouses(){
+  const select = document.getElementById("houseSelect");
+  const houses = [...new Set(horses.map(h=>h.house))];
+  select.innerHTML="";
+  houses.forEach(h=>{
+    let o=document.createElement("option");
+    o.value=h;
+    o.textContent=h;
+    select.appendChild(o);
+  });
+}
+
+function addHorses(){
+  let house = document.getElementById("newHouse").value.trim() || document.getElementById("houseSelect").value;
+  if(!house) return alert("Enter house");
+
+  document.getElementById("horseNames").value.split("\n").forEach(n=>{
+    n=n.trim();
+    if(n) horses.push({name:n, house});
+  });
+
+  document.getElementById("horseNames").value="";
+  document.getElementById("newHouse").value="";
+  save();
+  updateHouses();
+  renderHorseList();
+}
+
+function removeHorse(i){
+  horses.splice(i,1);
+  save();
+  renderHorseList();
+}
+
+function renderHorseList(){
+  const div = document.getElementById("horseList");
+  div.innerHTML="";
+  horses.forEach((h,i)=>{
+    div.innerHTML += `${h.name} (${h.house}) <button onclick="removeHorse(${i})">X</button><br>`;
+  });
+}
+
+function shuffle(arr){
+  return arr.sort(()=>Math.random()-0.5);
+}
+
+// ✅ FINAL LOGIC
+function generateAutoDraw(){
+  const out = document.getElementById("drawResults");
+  out.innerHTML="";
+
+  if(horses.length < 2) return;
+
+  let houseMap = {};
+  horses.forEach(h=>{
+    if(!houseMap[h.house]) houseMap[h.house]=[];
+    houseMap[h.house].push(h);
+  });
+
+  let houses = Object.keys(houseMap);
+
+  // warning check
+  let maxHouse = Math.max(...Object.values(houseMap).map(h=>h.length));
+  let others = horses.length - maxHouse;
+
+  if(maxHouse > others + 1){
+    out.innerHTML += "<p style='color:red'>⚠️ Not enough variety to avoid same-house races</p>";
+  }
+
+  houses.forEach(h => houseMap[h]=shuffle(houseMap[h]));
+
+  let heats=[];
+
+  while(true){
+    let available = houses.filter(h=>houseMap[h].length>0);
+    if(available.length===0) break;
+
+    let remaining = Object.values(houseMap).reduce((a,b)=>a+b.length,0);
+
+    let size;
+    if(remaining<=3) size=remaining;
+    else if(remaining===4) size=2;
+    else size=3;
+
+    size = Math.min(size, available.length);
+    if(size<2) break;
+
+    let chosen = shuffle([...available]).slice(0,size);
+    let heat = chosen.map(h=>houseMap[h].pop());
+
+    heats.push(heat);
+  }
+
+  heats.forEach((h,i)=>{
+    out.innerHTML += `<div class="race"><b>Race ${i+1}</b><ul>`;
+    h.forEach(x=>{
+      out.innerHTML += `<li>${x.name} (${x.house})</li>`;
+    });
+    out.innerHTML += "</ul></div>";
+  });
+}
+
+function deleteAll(){
+  localStorage.clear();
+  location.reload();
+}
 </script>
 
 </body>

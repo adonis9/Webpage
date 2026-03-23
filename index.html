@@ -122,43 +122,59 @@ function renderHorseList(){
   horses.forEach((h,i)=>{ div.innerHTML += `${h.name} (${h.house}) <button onclick="removeHorse(${i})">X</button><br>`; });
 }
 
+// Shuffle helper
 function shuffle(arr){ return arr.sort(()=>Math.random()-0.5); }
 
-// ✅ Fully Fixed Draw Logic
+// ✅ Strict Draw Logic
 function generateAutoDraw(){
   const out = document.getElementById("drawResults");
-  out.innerHTML="";
-  if(horses.length<2) return;
+  out.innerHTML = "";
+  if(horses.length < 2) return;
 
   let unassigned = shuffle([...horses]);
   let heats = [];
 
-  while(unassigned.length>0){
+  while(unassigned.length > 0){
     let heat = [];
     let housesInHeat = new Set();
 
     for(let i=0; i<unassigned.length && heat.length<3; i++){
-      if(!housesInHeat.has(unassigned[i].house) || heat.length===2){
-        heat.push(unassigned[i]);
-        housesInHeat.add(unassigned[i].house);
+      let horse = unassigned[i];
+      if(!housesInHeat.has(horse.house)){
+        heat.push(horse);
+        housesInHeat.add(horse.house);
       }
     }
-    // remove assigned horses
+
     heat.forEach(h=>{
-      let index = unassigned.indexOf(h);
-      if(index>-1) unassigned.splice(index,1);
+      let idx = unassigned.indexOf(h);
+      if(idx > -1) unassigned.splice(idx, 1);
     });
-    // if heat has only 1 horse left, merge with previous heat
-    if(heat.length===1 && heats.length>0){
-      heats[heats.length-1].push(heat[0]);
-    } else {
-      heats.push(heat);
+
+    heats.push(heat);
+  }
+
+  // Ensure min 2 horses per race if possible
+  for(let i=0; i<heats.length; i++){
+    if(heats[i].length < 2 && heats.length > 1){
+      for(let j=i+1; j<heats.length; j++){
+        for(let k=0; k<heats[j].length; k++){
+          if(!heats[i].some(h=>h.house === heats[j][k].house) && heats[i].length < 3){
+            heats[i].push(heats[j][k]);
+            heats[j].splice(k,1);
+            break;
+          }
+        }
+      }
     }
   }
 
+  // Render heats
   heats.forEach((h,i)=>{
     out.innerHTML += `<div class="race"><b>Race ${i+1}</b><ul>`;
-    h.forEach(x=>{ out.innerHTML += `<li>${x.name} (${x.house})</li>`; });
+    h.forEach(x=>{
+      out.innerHTML += `<li>${x.name} (${x.house})</li>`;
+    });
     out.innerHTML += "</ul></div>";
   });
 }
